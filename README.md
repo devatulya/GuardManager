@@ -1,50 +1,53 @@
-# Welcome to your Expo app 👋
+# GuardManager App
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+A comprehensive Guard Supervision and Attendance Management System built with React Native (Expo) and Firebase.
 
-## Get started
+## Features
 
-1. Install dependencies
+### 🔐 Authentication
+- **Email/Password Login & Signup**: Secure authentication via Firebase Auth.
+- **Google Sign-In**: Integrated Google login (Web supported).
+- **Profile Management**: Mandatory profile setup for Supervisors (Name, Region, Stats).
 
-   ```bash
-   npm install
-   ```
+### 📱 UI & Navigation
+- **Modern Design**: Clean, professional UI with consistent branding.
+- **Swipe Navigation**: Fluid swipe gestures between main modules (Home, Payroll, Guards, etc.).
+- **Safe Area Handling**: Optimized for modern devices with notches and home indicators.
 
-2. Start the app
+### 🛠 Core Modules
+1.  **Dashboard**: Overview of attendance and stats.
+2.  **Attendance**: Clock-in/out system with location/selfie verification (planned).
+3.  **Payroll**: Manage advances and view salaries.
+4.  **Guards & Sites**: Add and manage security guards and sites.
+5.  **Reports**: Generate site-wise or guard-wise reports with auto-refreshing data.
 
-   ```bash
-   npx expo start
-   ```
+## Getting Started
 
-In the output, you'll find options to open the app in a
+1.  **Install Dependencies**
+    ```bash
+    npm install
+    ```
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+2.  **Start the Server**
+    ```bash
+    npx expo start -c
+    ```
+    *Note: The `-c` flag clears the cache, which is recommended after dependency updates.*
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+3.  **Run on Device**
+    - Press `w` for Web.
+    - Press `a` for Android Emulator.
+    - Scan QR code with Expo Go app for physical device.
 
-## Get a fresh project
+## Google Auth Setup
+- Currently configured for **Web** using `signInWithPopup`.
+- For Native (Android/iOS), you will need to configure `expo-google-app-auth` or `react-native-google-signin` with proper SHA-1 keys in Firebase Console.
 
-When you're ready, run:
+## Project Structure
+- `src/screens`: UI Screens.
+- `src/navigation`: App Navigation (Swipeable Tabs, Stacks).
+- `src/services`: Firebase interaction logic (guards, sites, reports).
+- `src/context`: Authentication State Management.
+- `src/theme`: Centralized colors and styling constants.
 
-```bash
-npm run reset-project
-```
-
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
-
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+Built by [Your Name/Team]
