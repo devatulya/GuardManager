@@ -1,17 +1,15 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import DateTimePickerField from '../components/DateTimePickerField';
 import SearchablePicker from '../components/SearchablePicker';
+import { useTheme } from '../context/ThemeContext';
 import { getAttendanceProgress, markAttendance, markGlobalAttendance } from '../services/attendance';
 import { getGuards } from '../services/guards';
 import { getSites } from '../services/sites';
-import { theme } from '../theme';
 import { formatDate } from '../utils/date';
-
-// Force IST Date string for calculations
 
 // Force IST Date string for calculations
 const getLocalISODate = (date) => {
@@ -24,6 +22,9 @@ const getLocalISODate = (date) => {
 };
 
 export default function AttendanceScreen({ navigation }) {
+    const { theme, setThemeMode, themeMode } = useTheme();
+    const styles = useMemo(() => getStyles(theme), [theme]);
+
     // 1. GLOBAL DATE STATE
     const [date, setDate] = useState(new Date());
 
@@ -160,6 +161,19 @@ export default function AttendanceScreen({ navigation }) {
         setHasManuallySelectedSite(true);
     };
 
+    const handleThemeToggle = () => {
+        Alert.alert(
+            'Select Theme',
+            `Current: ${themeMode.charAt(0).toUpperCase() + themeMode.slice(1)}`,
+            [
+                { text: 'Light', onPress: () => setThemeMode('light') },
+                { text: 'Dark', onPress: () => setThemeMode('dark') },
+                { text: 'System Default', onPress: () => setThemeMode('system') },
+                { text: 'Cancel', style: 'cancel' }
+            ]
+        );
+    };
+
     return (
         <SafeAreaView style={styles.container}>
             {/* 1. GLOBAL DATE SELECTOR */}
@@ -181,16 +195,30 @@ export default function AttendanceScreen({ navigation }) {
                         onChange={setDate}
                         mode="date"
                         displayValue={formatDate(date)}
+                        theme={theme} // Pass theme to component if it accepts it, otherwise it uses static? It might need refactor too.
                     />
                 </View>
 
-                <Pressable
-                    style={styles.notificationIcon}
-                    onPress={() => navigation.navigate('Notifications')}
-                >
-                    <MaterialIcons name="notifications" size={24} color={theme.colors.slate900} />
-                    <View style={styles.badge} />
-                </Pressable>
+                <View style={styles.headerActions}>
+                    <Pressable
+                        style={styles.iconButton}
+                        onPress={handleThemeToggle}
+                    >
+                        <MaterialIcons
+                            name={themeMode === 'dark' ? 'dark-mode' : (themeMode === 'light' ? 'light-mode' : 'settings-brightness')}
+                            size={24}
+                            color={theme.colors.text}
+                        />
+                    </Pressable>
+
+                    <Pressable
+                        style={styles.iconButton}
+                        onPress={() => navigation.navigate('Notifications')}
+                    >
+                        <MaterialIcons name="notifications" size={24} color={theme.colors.text} />
+                        <View style={styles.badge} />
+                    </Pressable>
+                </View>
             </View>
 
             <ScrollView contentContainerStyle={styles.content}>
@@ -239,6 +267,7 @@ export default function AttendanceScreen({ navigation }) {
                             selectedValue={selectedSiteId}
                             onValueChange={handleSiteChange}
                             placeholder="Select Site..."
+                            theme={theme}
                         />
 
                         <View style={{ height: 16 }} />
@@ -249,6 +278,7 @@ export default function AttendanceScreen({ navigation }) {
                             selectedValue={selectedGuardId}
                             onValueChange={setSelectedGuardId}
                             placeholder="Select Guard..."
+                            theme={theme}
                         />
 
                         <View style={styles.row}>
@@ -258,6 +288,7 @@ export default function AttendanceScreen({ navigation }) {
                                     value={startTime}
                                     onChange={setStartTime}
                                     mode="time"
+                                    theme={theme}
                                 />
                             </View>
                             <View style={styles.halfInput}>
@@ -266,11 +297,10 @@ export default function AttendanceScreen({ navigation }) {
                                     value={endTime}
                                     onChange={setEndTime}
                                     mode="time"
+                                    theme={theme}
                                 />
                             </View>
                         </View>
-
-                        {/* NO DATE PICKER HERE anymore */}
 
                         <Pressable
                             style={({ pressed }) => [styles.saveButton, pressed && styles.pressed]}
@@ -291,7 +321,7 @@ export default function AttendanceScreen({ navigation }) {
                     >
                         <MaterialIcons name="date-range" size={24} color={theme.colors.primary} style={{ marginRight: 8 }} />
                         <Text style={styles.reviewButtonText}>View Attendance for {formatDate(date)}</Text>
-                        <MaterialIcons name="chevron-right" size={24} color={theme.colors.slate400} style={{ marginLeft: 'auto' }} />
+                        <MaterialIcons name="chevron-right" size={24} color={theme.colors.textSecondary} style={{ marginLeft: 'auto' }} />
                     </Pressable>
                 </View>
 
@@ -300,7 +330,7 @@ export default function AttendanceScreen({ navigation }) {
     );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme) => StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: theme.colors.backgroundLight,
@@ -310,9 +340,9 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'space-between',
         padding: theme.spacing.m,
-        backgroundColor: theme.colors.white,
+        backgroundColor: theme.colors.headerBackground,
         borderBottomWidth: 1,
-        borderBottomColor: theme.colors.slate200,
+        borderBottomColor: theme.colors.border,
         paddingTop: 16, // Extra safe area
     },
     profileButton: {
@@ -343,16 +373,24 @@ const styles = StyleSheet.create({
     dateDisplay: {
         fontSize: 18,
         fontWeight: 'bold',
-        color: theme.colors.slate900,
-        marginTop: -38, // HACK: Overlay on top of transparent picker
-        pointerEvents: 'none', // Let click pass to picker
+        color: theme.colors.text,
+        marginTop: -38, // HACK: Overlay
+        pointerEvents: 'none',
         marginBottom: 8,
     },
-    notificationIcon: {
+    headerActions: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+    },
+    iconButton: {
         width: 40,
         height: 40,
         justifyContent: 'center',
         alignItems: 'center',
+    },
+    notificationIcon: {
+        // Redundant if handled by iconButton
     },
     badge: {
         position: 'absolute',
@@ -363,7 +401,7 @@ const styles = StyleSheet.create({
         borderRadius: 5,
         backgroundColor: theme.colors.danger,
         borderWidth: 2,
-        borderColor: 'white',
+        borderColor: theme.colors.headerBackground,
     },
     content: {
         padding: theme.spacing.m,
@@ -376,10 +414,10 @@ const styles = StyleSheet.create({
     progressCard: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: theme.colors.white,
+        backgroundColor: theme.colors.cardBackground,
         borderRadius: theme.borderRadius.xl,
         borderWidth: 1,
-        borderColor: theme.colors.slate200,
+        borderColor: theme.colors.border,
         padding: theme.spacing.m,
         gap: theme.spacing.m,
         shadowColor: '#000',
@@ -402,17 +440,17 @@ const styles = StyleSheet.create({
     progressTitle: {
         fontSize: 14,
         fontWeight: 'bold',
-        color: theme.colors.slate900,
+        color: theme.colors.text,
     },
     progressSubtitle: {
         fontSize: 12,
         fontWeight: '500',
-        color: theme.colors.slate500,
+        color: theme.colors.textSecondary,
         marginBottom: 8,
     },
     progressBarBg: {
         height: 6,
-        backgroundColor: theme.colors.slate100,
+        backgroundColor: theme.colors.border, // slate100/700
         borderRadius: 3,
         overflow: 'hidden',
     },
@@ -435,13 +473,13 @@ const styles = StyleSheet.create({
         elevation: 4,
     },
     markAllText: {
-        color: 'white',
+        color: 'white', // Primary buttons usually keep white text even in dark mode? Or should adapt? contrast usually safe.
         fontSize: 18,
         fontWeight: 'bold',
     },
     helperText: {
         textAlign: 'center',
-        color: theme.colors.slate500,
+        color: theme.colors.textSecondary,
         fontSize: 12,
     },
     sectionHeader: {
@@ -452,16 +490,16 @@ const styles = StyleSheet.create({
     sectionTitle: {
         fontSize: 12,
         fontWeight: 'bold',
-        color: theme.colors.slate500,
+        color: theme.colors.textSecondary,
         textTransform: 'uppercase',
         letterSpacing: 1,
     },
     card: {
-        backgroundColor: theme.colors.white,
+        backgroundColor: theme.colors.cardBackground,
         borderRadius: theme.borderRadius.xl,
         padding: theme.spacing.m,
         borderWidth: 1,
-        borderColor: theme.colors.slate200,
+        borderColor: theme.colors.border,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.05,
@@ -502,7 +540,7 @@ const styles = StyleSheet.create({
     reviewButton: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: theme.colors.white,
+        backgroundColor: theme.colors.cardBackground,
         padding: theme.spacing.m,
         borderRadius: theme.borderRadius.l,
         borderWidth: 1,

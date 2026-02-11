@@ -1,16 +1,18 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { useIsFocused } from '@react-navigation/native';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import DateTimePickerField from '../components/DateTimePickerField';
 import SearchablePicker from '../components/SearchablePicker';
+import { useTheme } from '../context/ThemeContext';
 import { getGuards } from '../services/guards';
-import { generateGuardWiseReport, generateSiteWiseReport } from '../services/reports';
+import * as Reports from '../services/reports';
 import { getSites } from '../services/sites';
-import { theme } from '../theme';
 
 export default function ReportsScreen({ navigation }) {
+    const { theme } = useTheme();
+    const styles = useMemo(() => getStyles(theme), [theme]);
     const isFocused = useIsFocused();
     const [reportType, setReportType] = useState('Site-wise'); // 'Site-wise' | 'Guard-wise'
     const [selectedEntityId, setSelectedEntityId] = useState('');
@@ -70,19 +72,19 @@ export default function ReportsScreen({ navigation }) {
             };
 
             if (reportType === 'Site-wise') {
-                data = await generateSiteWiseReport(
+                data = await Reports.generateSiteWiseReport(
                     selectedEntityId,
                     formatDate(startDate),
                     formatDate(endDate)
                 );
             } else if (reportType === 'Guard-wise') {
-                data = await generateGuardWiseReport(
+                data = await Reports.generateGuardWiseReport(
                     selectedEntityId,
                     formatMonth(selectedMonth)
                 );
             } else {
                 // Daily Report
-                data = await generateDailyReport(formatDate(startDate));
+                data = await Reports.generateDailyReport(formatDate(startDate));
             }
 
             let entityName = '';
@@ -231,7 +233,7 @@ export default function ReportsScreen({ navigation }) {
     );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme) => StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: theme.colors.backgroundLight,
@@ -241,14 +243,14 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'space-between',
         padding: theme.spacing.m,
-        backgroundColor: theme.colors.white,
+        backgroundColor: theme.colors.headerBackground,
         borderBottomWidth: 1,
-        borderBottomColor: theme.colors.slate100,
+        borderBottomColor: theme.colors.border,
     },
     headerTitle: {
         fontSize: 18,
         fontWeight: 'bold',
-        color: theme.colors.slate900,
+        color: theme.colors.text,
     },
     backButton: {
         padding: theme.spacing.s,
@@ -256,11 +258,11 @@ const styles = StyleSheet.create({
     },
     tabs: {
         padding: theme.spacing.m,
-        backgroundColor: theme.colors.white,
+        backgroundColor: theme.colors.headerBackground,
     },
     tabContainer: {
         flexDirection: 'row',
-        backgroundColor: theme.colors.slate100,
+        backgroundColor: theme.colors.backgroundLight,
         borderRadius: theme.borderRadius.l,
         padding: 4,
         height: 48,
@@ -272,7 +274,7 @@ const styles = StyleSheet.create({
         borderRadius: theme.borderRadius.m,
     },
     tabActive: {
-        backgroundColor: theme.colors.white,
+        backgroundColor: theme.colors.cardBackground,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.1,
@@ -281,10 +283,10 @@ const styles = StyleSheet.create({
     tabText: {
         fontSize: 14,
         fontWeight: '600',
-        color: theme.colors.slate500,
+        color: theme.colors.textSecondary,
     },
     tabTextActive: {
-        color: theme.colors.slate900,
+        color: theme.colors.text,
     },
     content: {
         padding: theme.spacing.m,
@@ -293,7 +295,7 @@ const styles = StyleSheet.create({
     sectionTitle: {
         fontSize: 18,
         fontWeight: 'bold',
-        color: theme.colors.slate900,
+        color: theme.colors.text,
         marginBottom: theme.spacing.m,
     },
     inputGroup: {
@@ -302,14 +304,14 @@ const styles = StyleSheet.create({
     label: {
         fontSize: 14,
         fontWeight: '600',
-        color: theme.colors.slate600,
+        color: theme.colors.textSecondary,
         marginBottom: 8,
     },
     calendarCard: {
-        backgroundColor: theme.colors.white,
+        backgroundColor: theme.colors.cardBackground,
         borderRadius: theme.borderRadius.xl,
         borderWidth: 1,
-        borderColor: theme.colors.slate100,
+        borderColor: theme.colors.border,
         padding: theme.spacing.m,
         marginTop: 8,
     },
@@ -324,13 +326,13 @@ const styles = StyleSheet.create({
         paddingVertical: 6,
         borderRadius: 20,
         borderWidth: 1,
-        borderColor: theme.colors.slate200,
-        backgroundColor: theme.colors.slate50,
+        borderColor: theme.colors.border,
+        backgroundColor: theme.colors.backgroundLight,
     },
     rangeText: {
         fontSize: 12,
         fontWeight: '600',
-        color: theme.colors.slate600,
+        color: theme.colors.textSecondary,
     },
     footer: {
         position: 'absolute',
@@ -339,9 +341,9 @@ const styles = StyleSheet.create({
         right: 0,
         padding: theme.spacing.m,
         paddingBottom: 32,
-        backgroundColor: '#ffffffCC',
+        backgroundColor: `${theme.colors.headerBackground}CC`,
         borderTopWidth: 1,
-        borderTopColor: theme.colors.slate100,
+        borderTopColor: theme.colors.border,
         gap: 12,
     },
     primaryButton: {

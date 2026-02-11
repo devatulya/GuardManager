@@ -1,12 +1,13 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
-import { theme } from '../theme';
+import { theme as defaultTheme } from '../theme';
 import { formatDate } from '../utils/date';
 
-export default function DateTimePickerField({ label, value, onChange, mode = 'time', displayValue }) {
+export default function DateTimePickerField({ label, value, onChange, mode = 'time', displayValue, theme = defaultTheme }) {
     const [show, setShow] = useState(false);
+    const styles = useMemo(() => getStyles(theme), [theme]);
 
     // Helper to format display value
     const formatValue = (date) => {
@@ -58,6 +59,7 @@ export default function DateTimePickerField({ label, value, onChange, mode = 'ti
                                     display="spinner"
                                     onChange={handleChange}
                                     style={{ width: '100%' }}
+                                    themeVariant={theme.colors.backgroundDark === '#000000' || theme.colors.backgroundDark === '#020617' ? 'dark' : 'light'} // Basic check for dark mode
                                 />
                             </View>
                         </View>
@@ -77,30 +79,30 @@ export default function DateTimePickerField({ label, value, onChange, mode = 'ti
     );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme) => StyleSheet.create({
     container: {
         marginBottom: 0,
     },
     label: {
         fontSize: 14,
         fontWeight: '600',
-        color: theme.colors.slate700,
+        color: theme.colors.textSecondary,
         marginBottom: 8,
     },
     inputContainer: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        backgroundColor: theme.colors.white,
+        backgroundColor: theme.colors.cardBackground,
         borderWidth: 1,
-        borderColor: theme.colors.slate200,
+        borderColor: theme.colors.border,
         borderRadius: theme.borderRadius.l,
         padding: theme.spacing.m,
         height: 56,
     },
     valueText: {
         fontSize: 16,
-        color: theme.colors.slate900,
+        color: theme.colors.text,
     },
     modalOverlay: {
         flex: 1,
@@ -108,15 +110,17 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(0,0,0,0.5)',
     },
     iosPickerContainer: {
-        backgroundColor: 'white',
+        backgroundColor: theme.colors.cardBackground,
         paddingBottom: 20,
     },
     iosHeader: {
         padding: 16,
         alignItems: 'flex-end',
-        backgroundColor: '#f8f8f8',
+        backgroundColor: theme.colors.backgroundLight,
         borderTopLeftRadius: 10,
         borderTopRightRadius: 10,
+        borderBottomWidth: 1,
+        borderBottomColor: theme.colors.border,
     },
     iosDone: {
         color: theme.colors.primary,

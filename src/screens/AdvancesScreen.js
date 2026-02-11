@@ -1,17 +1,19 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import DateTimePickerField from '../components/DateTimePickerField';
 import SearchablePicker from '../components/SearchablePicker';
+import { useTheme } from '../context/ThemeContext';
 import { addAdvance, getRecentAdvances } from '../services/advances';
 import { getGuards } from '../services/guards';
-import { theme } from '../theme';
 import { formatDate } from '../utils/date';
 
 export default function AdvancesScreen({ navigation }) {
+    const { theme } = useTheme();
+    const styles = useMemo(() => getStyles(theme), [theme]);
     const [guards, setGuards] = useState([]);
     const [advances, setAdvances] = useState([]);
 
@@ -118,7 +120,7 @@ export default function AdvancesScreen({ navigation }) {
         <SafeAreaView style={styles.container}>
             <View style={styles.header}>
                 <Pressable onPress={() => navigation.goBack()} style={styles.backButton}>
-                    <MaterialIcons name="arrow-back-ios" size={24} color={theme.colors.slate900} />
+                    <MaterialIcons name="arrow-back-ios" size={24} color={theme.colors.text} />
                 </Pressable>
                 <Text style={styles.headerTitle}>Advance Payments</Text>
                 <Pressable onPress={() => navigation.navigate('Notifications')} style={styles.notificationIcon}>
@@ -156,6 +158,7 @@ export default function AdvancesScreen({ navigation }) {
                                             selectedValue={selectedGuardId}
                                             onValueChange={setSelectedGuardId}
                                             placeholder="Search guard name or ID"
+                                            theme={theme}
                                         />
                                     </View>
                                 </View>
@@ -180,6 +183,7 @@ export default function AdvancesScreen({ navigation }) {
                                             value={date}
                                             onChange={setDate}
                                             mode="date"
+                                            theme={theme}
                                         />
                                     </View>
                                 </View>
@@ -221,7 +225,7 @@ export default function AdvancesScreen({ navigation }) {
     );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme) => StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: theme.colors.backgroundLight,
@@ -231,14 +235,14 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'space-between',
         padding: theme.spacing.m,
-        backgroundColor: theme.colors.white,
+        backgroundColor: theme.colors.headerBackground,
         borderBottomWidth: 1,
-        borderBottomColor: theme.colors.slate100,
+        borderBottomColor: theme.colors.border,
     },
     headerTitle: {
         fontSize: 18,
         fontWeight: 'bold',
-        color: theme.colors.slate900,
+        color: theme.colors.text,
     },
     backButton: {
         padding: theme.spacing.s,
@@ -268,10 +272,10 @@ const styles = StyleSheet.create({
         padding: theme.spacing.m,
     },
     heroCard: {
-        backgroundColor: theme.colors.white,
+        backgroundColor: theme.colors.cardBackground,
         borderRadius: theme.borderRadius.xl,
         borderWidth: 1,
-        borderColor: theme.colors.slate200,
+        borderColor: theme.colors.border,
         overflow: 'hidden',
         marginBottom: 24,
         shadowColor: '#000',
@@ -297,17 +301,16 @@ const styles = StyleSheet.create({
     },
     formDesc: {
         fontSize: 14,
-        color: theme.colors.slate500,
+        color: theme.colors.textSecondary,
     },
     label: {
         fontSize: 14,
         fontWeight: '600',
-        color: theme.colors.slate700,
+        color: theme.colors.text,
         marginBottom: 6,
     },
     pickerWrapper: {
-        backgroundColor: theme.colors.white,
-        // border handled by picker itself mostly, but we add wrapper for spacing
+        backgroundColor: theme.colors.cardBackground,
     },
     row: {
         flexDirection: 'row',
@@ -315,24 +318,25 @@ const styles = StyleSheet.create({
     amountInputWrapper: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: theme.colors.white,
+        backgroundColor: theme.colors.cardBackground,
         borderWidth: 1,
-        borderColor: theme.colors.slate200,
+        borderColor: theme.colors.border,
         borderRadius: theme.borderRadius.l,
         height: 56,
         paddingHorizontal: 12,
     },
     currencySymbol: {
         fontSize: 16,
-        color: theme.colors.slate500,
+        color: theme.colors.textSecondary,
         marginRight: 8,
     },
     amountInput: {
         flex: 1,
         fontSize: 16,
-        color: theme.colors.slate900,
+        color: theme.colors.text,
         height: '100%',
     },
+    inputGroup: {},
     saveButton: {
         backgroundColor: theme.colors.primary,
         height: 52,
@@ -366,7 +370,7 @@ const styles = StyleSheet.create({
     listTitle: {
         fontSize: 18,
         fontWeight: 'bold',
-        color: theme.colors.slate900,
+        color: theme.colors.text,
     },
     seeAllText: {
         fontSize: 14,
@@ -377,13 +381,13 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        backgroundColor: theme.colors.white,
+        backgroundColor: theme.colors.cardBackground,
         padding: 16,
         marginHorizontal: 16,
         marginBottom: 12,
         borderRadius: theme.borderRadius.xl,
         borderWidth: 1,
-        borderColor: theme.colors.slate100,
+        borderColor: theme.colors.border,
     },
     cardLeft: {
         flexDirection: 'row',
@@ -406,11 +410,11 @@ const styles = StyleSheet.create({
     cardTitle: {
         fontSize: 14,
         fontWeight: 'bold',
-        color: theme.colors.slate900,
+        color: theme.colors.text,
     },
     cardSubtitle: {
         fontSize: 12,
-        color: theme.colors.slate500,
+        color: theme.colors.textSecondary,
     },
     cardRight: {
         alignItems: 'flex-end',
@@ -423,7 +427,7 @@ const styles = StyleSheet.create({
     typeText: {
         fontSize: 10,
         fontWeight: 'bold',
-        color: theme.colors.slate500,
+        color: theme.colors.textSecondary,
         marginTop: 2,
     },
     emptyContainer: {
@@ -431,6 +435,6 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     emptyText: {
-        color: theme.colors.slate400,
+        color: theme.colors.textSecondary,
     },
 });

@@ -1,7 +1,8 @@
 import { MaterialIcons } from '@expo/vector-icons';
+import { useMemo } from 'react';
 import { FlatList, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { theme } from '../theme';
+import { useTheme } from '../context/ThemeContext';
 
 const MOCK_NOTIFICATIONS = [
     { id: '1', title: 'System Update', message: 'GuardManager v1.0.1 is live.', time: '2h ago', icon: 'system-update' },
@@ -10,7 +11,7 @@ const MOCK_NOTIFICATIONS = [
     { id: '4', title: 'Report Generated', message: 'Monthly report for Oct is ready.', time: '2d ago', icon: 'assignment' },
 ];
 
-const NotificationItem = ({ item }) => (
+const NotificationItem = ({ item, theme, styles }) => (
     <View style={styles.item}>
         <View style={styles.iconContainer}>
             <MaterialIcons name={item.icon} size={24} color={theme.colors.primary} />
@@ -24,6 +25,9 @@ const NotificationItem = ({ item }) => (
 );
 
 export default function NotificationsScreen() {
+    const { theme } = useTheme();
+    const styles = useMemo(() => getStyles(theme), [theme]);
+
     return (
         <SafeAreaView style={styles.container}>
             <View style={styles.header}>
@@ -32,41 +36,41 @@ export default function NotificationsScreen() {
             <FlatList
                 data={MOCK_NOTIFICATIONS}
                 keyExtractor={item => item.id}
-                renderItem={({ item }) => <NotificationItem item={item} />}
+                renderItem={({ item }) => <NotificationItem item={item} theme={theme} styles={styles} />}
                 contentContainerStyle={styles.list}
             />
         </SafeAreaView>
     );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme) => StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: theme.colors.backgroundLight,
     },
     header: {
         padding: theme.spacing.m,
-        backgroundColor: theme.colors.white,
+        backgroundColor: theme.colors.headerBackground,
         borderBottomWidth: 1,
-        borderBottomColor: theme.colors.slate200,
+        borderBottomColor: theme.colors.border,
         alignItems: 'center',
     },
     headerTitle: {
         fontSize: 18,
         fontWeight: 'bold',
-        color: theme.colors.slate900,
+        color: theme.colors.text,
     },
     list: {
         padding: theme.spacing.m,
     },
     item: {
         flexDirection: 'row',
-        backgroundColor: theme.colors.white,
+        backgroundColor: theme.colors.cardBackground,
         padding: theme.spacing.m,
         borderRadius: theme.borderRadius.l,
         marginBottom: theme.spacing.s,
-        borderBottomWidth: 1,
-        borderBottomColor: theme.colors.slate100,
+        borderWidth: 1,
+        borderColor: theme.colors.border,
     },
     iconContainer: {
         width: 48,
@@ -84,16 +88,16 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 16,
         fontWeight: 'bold',
-        color: theme.colors.slate900,
+        color: theme.colors.text,
         marginBottom: 2,
     },
     message: {
         fontSize: 14,
-        color: theme.colors.slate600,
+        color: theme.colors.textSecondary,
         marginBottom: 4,
     },
     time: {
         fontSize: 12,
-        color: theme.colors.slate400,
+        color: theme.colors.textSecondary,
     },
 });

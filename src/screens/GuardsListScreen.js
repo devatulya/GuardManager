@@ -1,28 +1,27 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTheme } from '../context/ThemeContext';
 import { getGuards } from '../services/guards';
-import { theme } from '../theme';
 
-const GuardCard = ({ guard }) => (
+const GuardCard = ({ guard, theme, styles }) => (
     <View style={styles.card}>
         <View style={styles.cardContent}>
             <View style={styles.textColumn}>
                 <View style={styles.statusRow}>
-                    <View style={[styles.statusDot, { backgroundColor: guard.active ? theme.colors.success : theme.colors.slate400 }]} />
-                    <Text style={[styles.statusText, { color: guard.active ? theme.colors.success : theme.colors.slate400 }]}>
+                    <View style={[styles.statusDot, { backgroundColor: guard.active ? theme.colors.success : theme.colors.textSecondary }]} />
+                    <Text style={[styles.statusText, { color: guard.active ? theme.colors.success : theme.colors.textSecondary }]}>
                         {guard.active ? 'Active' : 'Inactive'}
                     </Text>
                 </View>
                 <Text style={styles.guardName}>{guard.name}</Text>
                 <View style={styles.locationRow}>
-                    <MaterialIcons name="location-on" size={16} color={theme.colors.slate500} />
+                    <MaterialIcons name="location-on" size={16} color={theme.colors.textSecondary} />
                     <Text style={styles.guardLocation}>{guard.defaultSiteName || 'No Site Assigned'}</Text>
                 </View>
             </View>
-            {/* Placeholder Avatar logic */}
             <View style={styles.avatar}>
                 <Text style={styles.avatarText}>{guard.name.charAt(0)}</Text>
             </View>
@@ -31,6 +30,8 @@ const GuardCard = ({ guard }) => (
 );
 
 export default function GuardsListScreen({ navigation }) {
+    const { theme } = useTheme();
+    const styles = useMemo(() => getStyles(theme), [theme]);
     const [guards, setGuards] = useState([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
@@ -63,17 +64,17 @@ export default function GuardsListScreen({ navigation }) {
         <SafeAreaView style={styles.container}>
             <View style={styles.header}>
                 <View style={styles.headerTop}>
-                    <MaterialIcons name="menu" size={28} color={theme.colors.slate900} />
+                    <MaterialIcons name="menu" size={28} color={theme.colors.text} />
                     <Text style={styles.headerTitle}>Guards</Text>
-                    <MaterialIcons name="account-circle" size={28} color={theme.colors.slate900} />
+                    <MaterialIcons name="account-circle" size={28} color={theme.colors.text} />
                 </View>
                 <View style={styles.searchContainer}>
                     <View style={styles.searchBar}>
-                        <MaterialIcons name="search" size={24} color={theme.colors.slate500} style={styles.searchIcon} />
+                        <MaterialIcons name="search" size={24} color={theme.colors.textSecondary} style={styles.searchIcon} />
                         <TextInput
                             style={styles.searchInput}
                             placeholder="Search guards..."
-                            placeholderTextColor={theme.colors.slate400}
+                            placeholderTextColor={theme.colors.textSecondary}
                             value={search}
                             onChangeText={setSearch}
                         />
@@ -86,7 +87,7 @@ export default function GuardsListScreen({ navigation }) {
                 keyExtractor={item => item.id}
                 renderItem={({ item }) => (
                     <Pressable onPress={() => navigation.navigate('AddGuard', { guard: item })}>
-                        <GuardCard guard={item} />
+                        <GuardCard guard={item} theme={theme} styles={styles} />
                     </Pressable>
                 )}
                 contentContainerStyle={styles.listContent}
@@ -105,16 +106,16 @@ export default function GuardsListScreen({ navigation }) {
     );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme) => StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: theme.colors.backgroundLight,
     },
     header: {
-        backgroundColor: theme.colors.white,
+        backgroundColor: theme.colors.headerBackground,
         paddingBottom: theme.spacing.s,
         borderBottomWidth: 1,
-        borderBottomColor: theme.colors.slate200,
+        borderBottomColor: theme.colors.border,
     },
     headerTop: {
         flexDirection: 'row',
@@ -126,7 +127,7 @@ const styles = StyleSheet.create({
     headerTitle: {
         fontSize: 20,
         fontWeight: 'bold',
-        color: theme.colors.slate900,
+        color: theme.colors.text,
     },
     searchContainer: {
         paddingHorizontal: theme.spacing.m,
@@ -147,7 +148,7 @@ const styles = StyleSheet.create({
         height: '100%',
         paddingHorizontal: theme.spacing.s,
         fontSize: 16,
-        color: theme.colors.slate900,
+        color: theme.colors.text,
     },
     listContent: {
         padding: theme.spacing.m,
@@ -155,11 +156,11 @@ const styles = StyleSheet.create({
         paddingBottom: 80,
     },
     card: {
-        backgroundColor: theme.colors.white,
+        backgroundColor: theme.colors.cardBackground,
         padding: theme.spacing.m,
         borderRadius: theme.borderRadius.l,
         borderWidth: 1,
-        borderColor: theme.colors.slate100,
+        borderColor: theme.colors.border,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.05,
@@ -193,7 +194,7 @@ const styles = StyleSheet.create({
     guardName: {
         fontSize: 18,
         fontWeight: 'bold',
-        color: theme.colors.slate900,
+        color: theme.colors.text,
     },
     locationRow: {
         flexDirection: 'row',
@@ -202,20 +203,22 @@ const styles = StyleSheet.create({
     },
     guardLocation: {
         fontSize: 14,
-        color: theme.colors.slate500,
+        color: theme.colors.textSecondary,
     },
     avatar: {
-        width: 64, // size-16 roughly
+        width: 64,
         height: 64,
         borderRadius: theme.borderRadius.m,
-        backgroundColor: theme.colors.slate200,
+        backgroundColor: theme.colors.backgroundLight,
         justifyContent: 'center',
         alignItems: 'center',
+        borderWidth: 1,
+        borderColor: theme.colors.border,
     },
     avatarText: {
         fontSize: 24,
         fontWeight: 'bold',
-        color: theme.colors.slate500,
+        color: theme.colors.textSecondary,
     },
     fab: {
         position: 'absolute',
@@ -238,7 +241,7 @@ const styles = StyleSheet.create({
     },
     emptyText: {
         textAlign: 'center',
-        color: theme.colors.slate500,
+        color: theme.colors.textSecondary,
         marginTop: theme.spacing.xl,
     },
 });

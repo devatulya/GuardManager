@@ -1,11 +1,14 @@
 import { MaterialIcons } from '@expo/vector-icons';
+import { useMemo } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../context/AuthContext';
-import { theme } from '../theme';
+import { useTheme } from '../context/ThemeContext';
 
 export default function SettingsScreen() {
     const { user, logout } = useAuth();
+    const { theme, setThemeMode, themeMode } = useTheme();
+    const styles = useMemo(() => getStyles(theme), [theme]);
 
     const handleLogout = async () => {
         try {
@@ -13,6 +16,19 @@ export default function SettingsScreen() {
         } catch (e) {
             Alert.alert('Error', e.message);
         }
+    };
+
+    const toggleTheme = () => {
+        Alert.alert(
+            'Select Theme',
+            `Current: ${themeMode.charAt(0).toUpperCase() + themeMode.slice(1)}`,
+            [
+                { text: 'Light', onPress: () => setThemeMode('light') },
+                { text: 'Dark', onPress: () => setThemeMode('dark') },
+                { text: 'System Default', onPress: () => setThemeMode('system') },
+                { text: 'Cancel', style: 'cancel' }
+            ]
+        );
     };
 
     return (
@@ -38,14 +54,22 @@ export default function SettingsScreen() {
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>App Preferences</Text>
                     <Pressable style={styles.row}>
-                        <MaterialIcons name="notifications" size={24} color={theme.colors.slate500} />
+                        <MaterialIcons name="notifications" size={24} color={theme.colors.textSecondary} />
                         <Text style={styles.rowText}>Notifications</Text>
-                        <MaterialIcons name="chevron-right" size={24} color={theme.colors.slate400} />
+                        <MaterialIcons name="chevron-right" size={24} color={theme.colors.textSecondary} />
+                    </Pressable>
+                    <Pressable style={styles.row} onPress={toggleTheme}>
+                        <MaterialIcons name="brightness-6" size={24} color={theme.colors.textSecondary} />
+                        <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <Text style={styles.rowText}>Theme</Text>
+                            <Text style={styles.valueText}>{themeMode.charAt(0).toUpperCase() + themeMode.slice(1)}</Text>
+                        </View>
+                        <MaterialIcons name="chevron-right" size={24} color={theme.colors.textSecondary} />
                     </Pressable>
                     <Pressable style={styles.row}>
-                        <MaterialIcons name="language" size={24} color={theme.colors.slate500} />
+                        <MaterialIcons name="language" size={24} color={theme.colors.textSecondary} />
                         <Text style={styles.rowText}>Language</Text>
-                        <MaterialIcons name="chevron-right" size={24} color={theme.colors.slate400} />
+                        <MaterialIcons name="chevron-right" size={24} color={theme.colors.textSecondary} />
                     </Pressable>
                 </View>
 
@@ -60,22 +84,22 @@ export default function SettingsScreen() {
     );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme) => StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: theme.colors.backgroundLight,
     },
     header: {
         padding: theme.spacing.m,
-        backgroundColor: theme.colors.white,
+        backgroundColor: theme.colors.headerBackground,
         borderBottomWidth: 1,
-        borderBottomColor: theme.colors.slate200,
+        borderBottomColor: theme.colors.border,
         alignItems: 'center',
     },
     headerTitle: {
         fontSize: 18,
         fontWeight: 'bold',
-        color: theme.colors.slate900,
+        color: theme.colors.text,
     },
     content: {
         padding: theme.spacing.m,
@@ -83,7 +107,7 @@ const styles = StyleSheet.create({
     profileCard: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: theme.colors.white,
+        backgroundColor: theme.colors.cardBackground,
         borderRadius: theme.borderRadius.xl,
         padding: theme.spacing.l,
         marginBottom: theme.spacing.l,
@@ -92,6 +116,8 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.05,
         shadowRadius: 4,
         elevation: 2,
+        borderWidth: 1,
+        borderColor: theme.colors.border,
     },
     avatar: {
         width: 64,
@@ -113,11 +139,11 @@ const styles = StyleSheet.create({
     profileName: {
         fontSize: 18,
         fontWeight: 'bold',
-        color: theme.colors.slate900,
+        color: theme.colors.text,
     },
     profileEmail: {
         fontSize: 14,
-        color: theme.colors.slate500,
+        color: theme.colors.textSecondary,
         marginBottom: 8,
     },
     editProfileButton: {
@@ -125,23 +151,27 @@ const styles = StyleSheet.create({
         paddingHorizontal: 12,
         paddingVertical: 4,
         borderRadius: 16,
-        backgroundColor: theme.colors.slate100,
+        backgroundColor: theme.colors.backgroundLight,
+        borderWidth: 1,
+        borderColor: theme.colors.border,
     },
     editProfileText: {
         fontSize: 12,
         fontWeight: '600',
-        color: theme.colors.slate700,
+        color: theme.colors.text,
     },
     section: {
-        backgroundColor: theme.colors.white,
+        backgroundColor: theme.colors.cardBackground,
         borderRadius: theme.borderRadius.xl,
-        padding: theme.spacing.m, // p-4
+        padding: theme.spacing.m,
         marginBottom: theme.spacing.l,
+        borderWidth: 1,
+        borderColor: theme.colors.border,
     },
     sectionTitle: {
         fontSize: 14,
         fontWeight: 'bold',
-        color: theme.colors.slate500,
+        color: theme.colors.textSecondary,
         marginBottom: theme.spacing.m,
         textTransform: 'uppercase',
     },
@@ -150,19 +180,24 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingVertical: 12,
         borderBottomWidth: 1,
-        borderBottomColor: theme.colors.slate100,
+        borderBottomColor: theme.colors.border,
     },
     rowText: {
         flex: 1,
         fontSize: 16,
-        color: theme.colors.slate900,
+        color: theme.colors.text,
         marginLeft: 12,
+    },
+    valueText: {
+        fontSize: 14,
+        color: theme.colors.textSecondary,
+        marginRight: 8,
     },
     logoutButton: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: '#fee2e2', // red-100
+        backgroundColor: `${theme.colors.danger}1A`, // Light red
         padding: theme.spacing.m,
         borderRadius: theme.borderRadius.xl,
         marginBottom: theme.spacing.l,
@@ -175,7 +210,7 @@ const styles = StyleSheet.create({
     },
     version: {
         textAlign: 'center',
-        color: theme.colors.slate400,
+        color: theme.colors.textSecondary,
         fontSize: 12,
     },
 });

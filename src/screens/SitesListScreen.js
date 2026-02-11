@@ -1,15 +1,12 @@
-import { MaterialIcons } from '@expo/vector-icons'; // Using Expo vector icons which map to Material Symbols often
+import { MaterialIcons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTheme } from '../context/ThemeContext';
 import { getSites } from '../services/sites';
-import { theme } from '../theme';
 
-// Helper for Material Symbols if needed, but MaterialIcons is standard in Expo
-// Stitch uses "Material Symbols Outlined". MaterialIcons is close.
-
-const SiteCard = ({ site }) => (
+const SiteCard = ({ site, theme, styles }) => (
     <View style={styles.card}>
         <View style={styles.cardContent}>
             <View style={styles.iconContainer}>
@@ -21,12 +18,14 @@ const SiteCard = ({ site }) => (
             </View>
         </View>
         <View style={styles.chevron}>
-            <MaterialIcons name="chevron-right" size={28} color={theme.colors.slate900} />
+            <MaterialIcons name="chevron-right" size={28} color={theme.colors.text} />
         </View>
     </View>
 );
 
 export default function SitesListScreen({ navigation }) {
+    const { theme } = useTheme();
+    const styles = useMemo(() => getStyles(theme), [theme]);
     const [sites, setSites] = useState([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
@@ -58,17 +57,17 @@ export default function SitesListScreen({ navigation }) {
         <SafeAreaView style={styles.container}>
             <View style={styles.header}>
                 <View style={styles.headerTop}>
-                    <MaterialIcons name="menu" size={28} color={theme.colors.slate900} />
+                    <MaterialIcons name="menu" size={28} color={theme.colors.text} />
                     <Text style={styles.headerTitle}>Sites</Text>
-                    <MaterialIcons name="account-circle" size={28} color={theme.colors.slate900} />
+                    <MaterialIcons name="account-circle" size={28} color={theme.colors.text} />
                 </View>
                 <View style={styles.searchContainer}>
                     <View style={styles.searchBar}>
-                        <MaterialIcons name="search" size={24} color={theme.colors.slate500} style={styles.searchIcon} />
+                        <MaterialIcons name="search" size={24} color={theme.colors.textSecondary} style={styles.searchIcon} />
                         <TextInput
                             style={styles.searchInput}
                             placeholder="Search sites..."
-                            placeholderTextColor={theme.colors.slate400} // or slate500 based on theme
+                            placeholderTextColor={theme.colors.textSecondary}
                             value={search}
                             onChangeText={setSearch}
                         />
@@ -81,7 +80,7 @@ export default function SitesListScreen({ navigation }) {
                 keyExtractor={item => item.id}
                 renderItem={({ item }) => (
                     <Pressable onPress={() => navigation.navigate('AddSite', { site: item })}>
-                        <SiteCard site={item} />
+                        <SiteCard site={item} theme={theme} styles={styles} />
                     </Pressable>
                 )}
                 contentContainerStyle={styles.listContent}
@@ -100,15 +99,15 @@ export default function SitesListScreen({ navigation }) {
     );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme) => StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: theme.colors.backgroundLight,
     },
     header: {
-        backgroundColor: theme.colors.backgroundLight, // or slightly transparent if simulating blur
+        backgroundColor: theme.colors.headerBackground,
         borderBottomWidth: 1,
-        borderBottomColor: theme.colors.slate200,
+        borderBottomColor: theme.colors.border,
         paddingBottom: theme.spacing.s,
     },
     headerTop: {
@@ -121,7 +120,7 @@ const styles = StyleSheet.create({
     headerTitle: {
         fontSize: 20,
         fontWeight: 'bold',
-        color: theme.colors.slate900,
+        color: theme.colors.text,
     },
     searchContainer: {
         paddingHorizontal: theme.spacing.m,
@@ -130,11 +129,10 @@ const styles = StyleSheet.create({
     searchBar: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: theme.colors.white,
+        backgroundColor: theme.colors.cardBackground,
         borderRadius: theme.borderRadius.xl,
-        height: 44, // h-11
+        height: 44,
         paddingHorizontal: theme.spacing.s,
-        // shadow-sm logic (simplistic here)
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.1,
@@ -149,41 +147,40 @@ const styles = StyleSheet.create({
         height: '100%',
         paddingHorizontal: theme.spacing.s,
         fontSize: 16,
-        color: theme.colors.slate900,
+        color: theme.colors.text,
     },
     listContent: {
         padding: theme.spacing.m,
         gap: theme.spacing.s,
-        paddingBottom: 80, // Space for FAB
+        paddingBottom: 80,
     },
     card: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        backgroundColor: theme.colors.white,
-        padding: theme.spacing.m, // px-4 py-3
-        borderRadius: theme.borderRadius.l, // rounded-xl
+        backgroundColor: theme.colors.cardBackground,
+        padding: theme.spacing.m,
+        borderRadius: theme.borderRadius.l,
         borderWidth: 1,
-        borderColor: theme.colors.slate100, // gray-100
-        // shadow-sm
+        borderColor: theme.colors.border,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.05,
         shadowRadius: 2,
         elevation: 1,
-        marginBottom: theme.spacing.s, // space-y-3 equivalent
+        marginBottom: theme.spacing.s,
     },
     cardContent: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: theme.spacing.m, // gap-4
+        gap: theme.spacing.m,
         flex: 1,
     },
     iconContainer: {
-        width: 48, // size-12
+        width: 48,
         height: 48,
-        borderRadius: theme.borderRadius.m, // rounded-lg
-        backgroundColor: `${theme.colors.primary}1A`, // primary/10 approx
+        borderRadius: theme.borderRadius.m,
+        backgroundColor: `${theme.colors.primary}1A`,
         justifyContent: 'center',
         alignItems: 'center',
     },
@@ -194,12 +191,12 @@ const styles = StyleSheet.create({
     siteName: {
         fontSize: 16,
         fontWeight: '600',
-        color: theme.colors.slate900,
+        color: theme.colors.text,
         marginBottom: 2,
     },
     siteAddress: {
         fontSize: 14,
-        color: theme.colors.slate500, // #616189
+        color: theme.colors.textSecondary,
     },
     chevron: {
         width: 28,
@@ -209,15 +206,14 @@ const styles = StyleSheet.create({
     },
     fab: {
         position: 'absolute',
-        bottom: 24, // bottom-6
-        right: 24, // right-6
-        width: 56, // h-14 w-14
+        bottom: 24,
+        right: 24,
+        width: 56,
         height: 56,
         borderRadius: theme.borderRadius.full,
         backgroundColor: theme.colors.primary,
         justifyContent: 'center',
         alignItems: 'center',
-        // shadow-lg
         shadowColor: theme.colors.primary,
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.3,
@@ -229,7 +225,7 @@ const styles = StyleSheet.create({
     },
     emptyText: {
         textAlign: 'center',
-        color: theme.colors.slate500,
+        color: theme.colors.textSecondary,
         marginTop: theme.spacing.xl,
     },
 });

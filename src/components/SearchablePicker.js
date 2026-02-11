@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
-import { View, Text, Pressable, Modal, StyleSheet, TextInput, FlatList, SafeAreaView } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { theme } from '../theme';
+import { useMemo, useState } from 'react';
+import { FlatList, Modal, Pressable, SafeAreaView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { theme as defaultTheme } from '../theme';
 
-export default function SearchablePicker({ label, selectedValue, onValueChange, items, placeholder = "Select Item" }) {
+export default function SearchablePicker({ label, selectedValue, onValueChange, items, placeholder = "Select Item", theme = defaultTheme }) {
     const [visible, setVisible] = useState(false);
     const [search, setSearch] = useState('');
+    const styles = useMemo(() => getStyles(theme), [theme]);
 
     const selectedItem = items.find(i => i.id === selectedValue);
 
@@ -20,7 +21,7 @@ export default function SearchablePicker({ label, selectedValue, onValueChange, 
                 <Text style={selectedItem ? styles.pickerText : styles.pickerPlaceholder}>
                     {selectedItem ? selectedItem.name : placeholder}
                 </Text>
-                <MaterialIcons name="arrow-drop-down" size={24} color={theme.colors.slate400} />
+                <MaterialIcons name="arrow-drop-down" size={24} color={theme.colors.textSecondary} />
             </Pressable>
 
             <Modal visible={visible} animationType="slide">
@@ -28,15 +29,16 @@ export default function SearchablePicker({ label, selectedValue, onValueChange, 
                     <View style={styles.modalHeader}>
                         <Text style={styles.modalTitle}>{placeholder}</Text>
                         <Pressable onPress={() => setVisible(false)}>
-                            <MaterialIcons name="close" size={24} color={theme.colors.slate900} />
+                            <MaterialIcons name="close" size={24} color={theme.colors.text} />
                         </Pressable>
                     </View>
 
                     <View style={styles.searchContainer}>
-                        <MaterialIcons name="search" size={20} color={theme.colors.slate400} style={styles.searchIcon} />
+                        <MaterialIcons name="search" size={20} color={theme.colors.textSecondary} style={styles.searchIcon} />
                         <TextInput
                             style={styles.searchInput}
                             placeholder="Search..."
+                            placeholderTextColor={theme.colors.textSecondary}
                             value={search}
                             onChangeText={setSearch}
                             autoFocus
@@ -71,14 +73,14 @@ export default function SearchablePicker({ label, selectedValue, onValueChange, 
     );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme) => StyleSheet.create({
     container: {
         marginBottom: 0,
     },
     label: {
         fontSize: 14,
         fontWeight: '600',
-        color: theme.colors.slate700,
+        color: theme.colors.textSecondary,
         marginBottom: 8,
     },
     pickerButton: {
@@ -86,20 +88,20 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        backgroundColor: theme.colors.white,
+        backgroundColor: theme.colors.cardBackground,
         borderWidth: 1,
-        borderColor: theme.colors.slate200,
+        borderColor: theme.colors.border,
         borderRadius: theme.borderRadius.l,
         paddingHorizontal: theme.spacing.m,
     },
     pickerText: {
         fontSize: 16,
-        color: theme.colors.slate900,
+        color: theme.colors.text,
         fontWeight: '500',
     },
     pickerPlaceholder: {
         fontSize: 16,
-        color: theme.colors.slate400,
+        color: theme.colors.textSecondary,
     },
     modalContainer: {
         flex: 1,
@@ -111,21 +113,21 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         padding: theme.spacing.m,
         borderBottomWidth: 1,
-        borderBottomColor: theme.colors.slate200,
-        backgroundColor: theme.colors.white,
+        borderBottomColor: theme.colors.border,
+        backgroundColor: theme.colors.headerBackground,
     },
     modalTitle: {
         fontSize: 18,
         fontWeight: 'bold',
-        color: theme.colors.slate900,
+        color: theme.colors.text,
     },
     searchContainer: {
         margin: theme.spacing.m,
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: theme.colors.white,
+        backgroundColor: theme.colors.cardBackground,
         borderWidth: 1,
-        borderColor: theme.colors.slate300,
+        borderColor: theme.colors.border,
         borderRadius: theme.borderRadius.m,
         paddingHorizontal: theme.spacing.m,
         height: 48,
@@ -137,6 +139,7 @@ const styles = StyleSheet.create({
         flex: 1,
         height: '100%',
         fontSize: 16,
+        color: theme.colors.text,
     },
     item: {
         flexDirection: 'row',
@@ -144,12 +147,12 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         padding: theme.spacing.m,
         borderBottomWidth: 1,
-        borderBottomColor: theme.colors.slate100,
-        backgroundColor: theme.colors.white,
+        borderBottomColor: theme.colors.border,
+        backgroundColor: theme.colors.cardBackground,
     },
     itemText: {
         fontSize: 16,
-        color: theme.colors.slate700,
+        color: theme.colors.text,
     },
     selectedItemText: {
         color: theme.colors.primary,
@@ -158,6 +161,6 @@ const styles = StyleSheet.create({
     emptyText: {
         textAlign: 'center',
         marginTop: 20,
-        color: theme.colors.slate500,
+        color: theme.colors.textSecondary,
     },
 });

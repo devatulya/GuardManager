@@ -2,13 +2,13 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTheme } from '../context/ThemeContext';
 import AdvancesListScreen from '../screens/AdvancesListScreen';
 import AdvancesScreen from '../screens/AdvancesScreen';
 import AttendanceReviewScreen from '../screens/AttendanceReviewScreen';
 import AttendanceScreen from '../screens/AttendanceScreen';
 import NotificationsScreen from '../screens/NotificationsScreen';
 import SettingsScreenReal from '../screens/SettingsScreen';
-import { theme } from '../theme';
 import GuardsNavigator from './GuardsNavigator';
 import ReportsNavigator from './ReportsNavigator';
 import SitesNavigator from './SitesNavigator';
@@ -40,6 +40,8 @@ const Tab = createMaterialTopTabNavigator();
 
 export default function MainNavigator() {
     const insets = useSafeAreaInsets();
+    const { theme } = useTheme();
+
     return (
         <Tab.Navigator
             tabBarPosition="bottom"
@@ -54,9 +56,9 @@ export default function MainNavigator() {
                     top: 0, // Indicator at top of the bottom bar
                 },
                 tabBarStyle: {
-                    backgroundColor: 'white',
+                    backgroundColor: theme.colors.headerBackground,
                     borderTopWidth: 1,
-                    borderTopColor: theme.colors.slate100,
+                    borderTopColor: theme.colors.border,
                     elevation: 8,
                     shadowColor: '#000',
                     shadowOffset: { width: 0, height: -2 },
@@ -82,8 +84,6 @@ export default function MainNavigator() {
                     // but we can hardcode size or rely on default.
                     return <MaterialIcons name={iconName} size={24} color={color} />;
                 },
-                // Material Top Tabs doesn't support 'headerShown' directly, 
-                // but our screens are Stacks which handle their own headers or hide them.
             })}
         >
             <Tab.Screen

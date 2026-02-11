@@ -1,10 +1,10 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTheme } from '../context/ThemeContext';
 import { deleteAttendance, getAttendanceByDate } from '../services/attendance';
-import { theme } from '../theme';
 
 const formatDateHeader = (dateStr) => {
     if (!dateStr) return '';
@@ -14,6 +14,8 @@ const formatDateHeader = (dateStr) => {
 
 export default function AttendanceReviewScreen({ route, navigation }) {
     const { date } = route.params;
+    const { theme } = useTheme();
+    const styles = useMemo(() => getStyles(theme), [theme]);
     const [selectedIds, setSelectedIds] = useState(new Set());
     const [isSelectionMode, setIsSelectionMode] = useState(false);
     const [attendanceList, setAttendanceList] = useState([]);
@@ -198,7 +200,7 @@ export default function AttendanceReviewScreen({ route, navigation }) {
     );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme) => StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: theme.colors.backgroundLight,
@@ -208,14 +210,14 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'space-between',
         padding: theme.spacing.m,
-        backgroundColor: theme.colors.white,
+        backgroundColor: theme.colors.headerBackground,
         borderBottomWidth: 1,
-        borderBottomColor: theme.colors.slate100,
+        borderBottomColor: theme.colors.border,
     },
     headerTitle: {
         fontSize: 18,
         fontWeight: 'bold',
-        color: theme.colors.slate900,
+        color: theme.colors.text,
     },
     backButton: {
         padding: theme.spacing.s,
@@ -226,11 +228,11 @@ const styles = StyleSheet.create({
         gap: theme.spacing.m,
     },
     card: {
-        backgroundColor: theme.colors.white,
+        backgroundColor: theme.colors.cardBackground,
         padding: theme.spacing.m,
         borderRadius: theme.borderRadius.l,
         borderWidth: 1,
-        borderColor: theme.colors.slate100,
+        borderColor: theme.colors.border,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.05,
@@ -238,10 +240,10 @@ const styles = StyleSheet.create({
         elevation: 2,
     },
     cardPressed: {
-        backgroundColor: theme.colors.slate50,
+        backgroundColor: theme.colors.backgroundLight,
     },
     cardSelected: {
-        backgroundColor: `${theme.colors.primary}1A`, // Light blue background
+        backgroundColor: `${theme.colors.primary}1A`,
         borderColor: theme.colors.primary,
         borderWidth: 1.5,
     },
@@ -254,7 +256,7 @@ const styles = StyleSheet.create({
     guardName: {
         fontSize: 16,
         fontWeight: 'bold',
-        color: theme.colors.slate900,
+        color: theme.colors.text,
     },
     siteBadge: {
         backgroundColor: `${theme.colors.primary}1A`,
@@ -274,11 +276,11 @@ const styles = StyleSheet.create({
     },
     timeText: {
         fontSize: 14,
-        color: theme.colors.slate600,
+        color: theme.colors.textSecondary,
     },
     hintText: {
         fontSize: 10,
-        color: theme.colors.slate400,
+        color: theme.colors.textSecondary,
         marginTop: 8,
         textAlign: 'right',
         fontStyle: 'italic',
@@ -291,6 +293,6 @@ const styles = StyleSheet.create({
     emptyText: {
         marginTop: 16,
         fontSize: 16,
-        color: theme.colors.slate500,
+        color: theme.colors.textSecondary,
     },
 });
