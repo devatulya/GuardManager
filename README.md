@@ -1,53 +1,61 @@
-# GuardManager App
+# GuardManager
 
-A comprehensive Guard Supervision and Attendance Management System built with React Native (Expo) and Firebase.
+GuardManager is a comprehensive mobile application designed to streamline security guard management, attendance tracking, and duty allocation. Built with React Native and Expo, it provides a seamless experience for administrators and security personnel.
 
-## Features
+## 🚀 Features
 
-### 🔐 Authentication
-- **Email/Password Login & Signup**: Secure authentication via Firebase Auth.
-- **Google Sign-In**: Integrated Google login (Web supported).
-- **Profile Management**: Mandatory profile setup for Supervisors (Name, Region, Stats).
+- **Authentication System**: Secure login for administrators and guards.
+- **Dashboard**: Real-time overview of active guards and alerts.
+- **Guard Management**: Add, view, and manage guard profiles efficiently.
+- **Attendance Tracking**: Digital check-in/check-out system.
+- **Reports**: Generate basic duty and attendance reports.
 
-### 📱 UI & Navigation
-- **Modern Design**: Clean, professional UI with consistent branding.
-- **Swipe Navigation**: Fluid swipe gestures between main modules (Home, Payroll, Guards, etc.).
-- **Safe Area Handling**: Optimized for modern devices with notches and home indicators.
+## 🛠 Tech Stack
 
-### 🛠 Core Modules
-1.  **Dashboard**: Overview of attendance and stats.
-2.  **Attendance**: Clock-in/out system with location/selfie verification (planned).
-3.  **Payroll**: Manage advances and view salaries.
-4.  **Guards & Sites**: Add and manage security guards and sites.
-5.  **Reports**: Generate site-wise or guard-wise reports with auto-refreshing data.
+- **Framework**: [React Native](https://reactnative.dev/)
+- **Runtime**: [Expo](https://expo.dev/) (Managed Workflow)
+- **Language**: JavaScript / React
+- **Navigation**: React Navigation
+- **State Management**: React Context API
+- **Styling**: StyleSheet API
 
-## Getting Started
+## 📦 Versioning Strategy
 
-1.  **Install Dependencies**
-    ```bash
-    npm install
-    ```
+We follow [Semantic Versioning](https://semver.org/) (SemVer) for releases.
 
-2.  **Start the Server**
-    ```bash
-    npx expo start -c
-    ```
-    *Note: The `-c` flag clears the cache, which is recommended after dependency updates.*
+- **`main`**: The stable, production-ready branch.
+- **`v*-dev`** (e.g., `v2-dev`): Development branches for upcoming major/minor versions.
+- **Feature Branches**: All new features are developed in isolated branches (e.g., `feature/analytics`) and merged into the active development branch.
 
-3.  **Run on Device**
-    - Press `w` for Web.
-    - Press `a` for Android Emulator.
-    - Scan QR code with Expo Go app for physical device.
+### Current Version: v1.0.0
 
-## Google Auth Setup
-- Currently configured for **Web** using `signInWithPopup`.
-- For Native (Android/iOS), you will need to configure `expo-google-app-auth` or `react-native-google-signin` with proper SHA-1 keys in Firebase Console.
+## 🔧 Installation & Setup
 
-## Project Structure
-- `src/screens`: UI Screens.
-- `src/navigation`: App Navigation (Swipeable Tabs, Stacks).
-- `src/services`: Firebase interaction logic (guards, sites, reports).
-- `src/context`: Authentication State Management.
-- `src/theme`: Centralized colors and styling constants.
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/devatulya/GuardManager.git
+   cd GuardManager
+   ```
 
-Built by [Your Name/Team]
+2. **Install dependencies:**
+   ```bash
+   npm install
+   ```
+
+3. **Run the application:**
+   ```bash
+   npx expo start
+   ```
+   - Press `a` for Android Emulator
+   - Press `i` for iOS Simulator
+   - Scan the QR code with Expo Go on your physical device
+
+## 🗺 Roadmap
+
+- [ ] **v1.1.0**: Firebase Integration for real-time data sync.
+- [ ] **v1.2.0**: Advanced Reporting & Export to PDF/Excel.
+- [ ] **v2.0.0**: Complete UI Overhaul & Dark Mode support.
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
