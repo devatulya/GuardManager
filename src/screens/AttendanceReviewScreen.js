@@ -16,6 +16,8 @@ export default function AttendanceReviewScreen({ route, navigation }) {
     const { date } = route.params;
     const [selectedIds, setSelectedIds] = useState(new Set());
     const [isSelectionMode, setIsSelectionMode] = useState(false);
+    const [attendanceList, setAttendanceList] = useState([]);
+    const [loading, setLoading] = useState(true);
 
     const fetchAttendance = async () => {
         setLoading(true);
