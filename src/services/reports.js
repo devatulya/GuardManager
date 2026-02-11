@@ -119,3 +119,45 @@ export const generateGuardWiseReport = async (guardId, month) => {
         return {};
     }
 };
+
+/**
+ * Report Type 3: Daily Report (Date-wise)
+ * @param {string} date (YYYY-MM-DD)
+ * @returns {Promise<Array>} Sorted array of attendance records
+ */
+export const generateDailyReport = async (date) => {
+    try {
+        if (!date) return [];
+
+        const attendanceRef = getScopedCollection('attendance');
+        const q = query(
+            attendanceRef,
+            where('date', '==', date)
+        );
+
+        const snapshot = await getDocs(q);
+
+        const data = snapshot.docs.map(doc => {
+            const d = doc.data();
+            return {
+                id: doc.id,
+                date: d.date,
+                siteName: d.siteName || 'Unknown Site',
+                guardName: d.guardName || 'Unknown Guard',
+                startTime: d.startTime || '-',
+                endTime: d.endTime || '-'
+            };
+        });
+
+        // 3. Sorting Requirement: Site Name (A-Z) -> Guard Name (A-Z)
+        return data.sort((a, b) => {
+            const siteComparison = (a.siteName || '').localeCompare(b.siteName || '');
+            if (siteComparison !== 0) return siteComparison;
+            return (a.guardName || '').localeCompare(b.guardName || '');
+        });
+
+    } catch (error) {
+        console.error("Error generating daily report:", error);
+        return [];
+    }
+};

@@ -36,6 +36,14 @@ export default function ReportResultsScreen({ route, navigation }) {
         </View>
     );
 
+    const renderDailyReportItem = ({ item }) => (
+        <View style={styles.rowItem}>
+            <View style={styles.colLarge}><Text style={styles.cellText}>{item.siteName}</Text></View>
+            <View style={styles.colMedium}><Text style={styles.cellText}>{item.guardName}</Text></View>
+            <View style={styles.colTimeRange}><Text style={styles.cellText}>{item.startTime} - {item.endTime}</Text></View>
+        </View>
+    );
+
     const renderGuardReport = () => {
         if (!data || !data.attendance) return <Text>No Data</Text>;
         return (
@@ -114,6 +122,25 @@ export default function ReportResultsScreen({ route, navigation }) {
                             keyExtractor={(item, index) => index.toString()}
                         />
                     </>
+                ) : type === 'Daily' ? (
+                    <>
+                        {data.length === 0 ? (
+                            <Text style={styles.noDataText}>No attendance records found for this date.</Text>
+                        ) : (
+                            <>
+                                <View style={styles.tableHeader}>
+                                    <Text style={[styles.headerCell, styles.colLarge]}>Site Name</Text>
+                                    <Text style={[styles.headerCell, styles.colMedium]}>Guard Name</Text>
+                                    <Text style={[styles.headerCell, styles.colTimeRange]}>Time</Text>
+                                </View>
+                                <FlatList
+                                    data={data}
+                                    renderItem={renderDailyReportItem}
+                                    keyExtractor={(item, index) => index.toString()}
+                                />
+                            </>
+                        )}
+                    </>
                 ) : (
                     renderGuardReport()
                 )}
@@ -137,10 +164,13 @@ const styles = StyleSheet.create({
     headerCell: { fontWeight: 'bold', fontSize: 12, color: theme.colors.slate700 },
     rowItem: { flexDirection: 'row', paddingVertical: 12, borderBottomWidth: 1, borderColor: theme.colors.slate100 },
     cellText: { fontSize: 13, color: theme.colors.slate800 },
+    noDataText: { textAlign: 'center', marginTop: 20, color: theme.colors.slate500, fontStyle: 'italic' },
 
     colDate: { flex: 2 },
     colLarge: { flex: 3 },
+    colMedium: { flex: 2 },
     colTime: { flex: 1.5, textAlign: 'center' },
+    colTimeRange: { flex: 2, textAlign: 'center' },
 
     // Guard Summary Styles
     guardContainer: {},

@@ -47,7 +47,8 @@ export default function ReportsScreen({ navigation }) {
     };
 
     const handleGenerate = async () => {
-        if (!selectedEntityId) {
+        // Daily Report does NOT need Entity ID
+        if (reportType !== 'Daily' && !selectedEntityId) {
             alert('Please select a site or guard.');
             return;
         }
@@ -74,22 +75,28 @@ export default function ReportsScreen({ navigation }) {
                     formatDate(startDate),
                     formatDate(endDate)
                 );
-            } else {
+            } else if (reportType === 'Guard-wise') {
                 data = await generateGuardWiseReport(
                     selectedEntityId,
                     formatMonth(selectedMonth)
                 );
+            } else {
+                // Daily Report
+                data = await generateDailyReport(formatDate(startDate));
             }
+
+            let entityName = '';
+            if (reportType === 'Site-wise') entityName = sites.find(s => s.id === selectedEntityId)?.name;
+            else if (reportType === 'Guard-wise') entityName = guards.find(g => g.id === selectedEntityId)?.name;
+            else entityName = `Date: ${formatDate(startDate)}`;
 
             navigation.navigate('ReportResults', {
                 type: reportType,
                 entityId: selectedEntityId,
-                entityName: reportType === 'Site-wise'
-                    ? sites.find(s => s.id === selectedEntityId)?.name
-                    : guards.find(g => g.id === selectedEntityId)?.name,
+                entityName: entityName,
                 month: reportType === 'Site-wise'
                     ? `${formatDate(startDate)} to ${formatDate(endDate)}`
-                    : formatMonth(selectedMonth),
+                    : (reportType === 'Daily' ? formatDate(startDate) : formatMonth(selectedMonth)),
                 data
             });
         } catch (e) {
@@ -124,24 +131,33 @@ export default function ReportsScreen({ navigation }) {
                     >
                         <Text style={[styles.tabText, reportType === 'Guard-wise' && styles.tabTextActive]}>Guard-wise</Text>
                     </Pressable>
+                    <Pressable
+                        style={[styles.tab, reportType === 'Daily' && styles.tabActive]}
+                        onPress={() => { setReportType('Daily'); setSelectedEntityId(''); }}
+                    >
+                        <Text style={[styles.tabText, reportType === 'Daily' && styles.tabTextActive]}>Daily</Text>
+                    </Pressable>
                 </View>
             </View>
 
             <ScrollView contentContainerStyle={styles.content}>
                 <Text style={styles.sectionTitle}>Report Parameters</Text>
 
-                <View style={styles.inputGroup}>
-                    <SearchablePicker
-                        label={reportType === 'Site-wise' ? 'Select Site' : 'Select Guard'}
-                        selectedValue={selectedEntityId}
-                        onValueChange={setSelectedEntityId}
-                        items={reportType === 'Site-wise' ? sites : guards}
-                        placeholder={reportType === 'Site-wise' ? 'Search Site...' : 'Search Guard...'}
-                    />
-                </View>
+                {/* Hide Picker for Daily Report */}
+                {reportType !== 'Daily' && (
+                    <View style={styles.inputGroup}>
+                        <SearchablePicker
+                            label={reportType === 'Site-wise' ? 'Select Site' : 'Select Guard'}
+                            selectedValue={selectedEntityId}
+                            onValueChange={setSelectedEntityId}
+                            items={reportType === 'Site-wise' ? sites : guards}
+                            placeholder={reportType === 'Site-wise' ? 'Search Site...' : 'Search Guard...'}
+                        />
+                    </View>
+                )}
 
                 <Text style={[styles.label, { marginTop: 16 }]}>
-                    {reportType === 'Site-wise' ? 'Select Date Range' : 'Select Month'}
+                    {reportType === 'Site-wise' ? 'Select Date Range' : (reportType === 'Daily' ? 'Select Date' : 'Select Month')}
                 </Text>
 
                 <View style={styles.calendarCard}>
@@ -171,6 +187,15 @@ export default function ReportsScreen({ navigation }) {
                                     <Text style={styles.rangeText}>This Month</Text>
                                 </Pressable>
                             </View>
+                        </View>
+                    ) : reportType === 'Daily' ? (
+                        <View>
+                            <DateTimePickerField
+                                label="Select Date"
+                                value={startDate} // Reusing startDate for single date
+                                onChange={setStartDate}
+                                mode="date"
+                            />
                         </View>
                     ) : (
                         <View>

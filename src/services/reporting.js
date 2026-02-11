@@ -64,6 +64,30 @@ export const sharePDF = async (type, entityName, month, data) => {
                 </tbody>
             </table>
         `;
+    } else if (type === 'Daily') {
+        const rows = data.map(item => `
+            <tr>
+                <td>${item.siteName}</td>
+                <td>${item.guardName}</td>
+                <td>${item.startTime} - ${item.endTime}</td>
+            </tr>
+        `).join('');
+
+        content = `
+            <h3>Daily Attendance Report</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 35%">Site Name</th>
+                        <th style="width: 35%">Guard Name</th>
+                        <th style="width: 30%">Time (In - Out)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${rows}
+                </tbody>
+            </table>
+        `;
     } else {
         // Guard-wise Logic (Summary + Table)
         if (!data || !data.attendance) return;
@@ -126,6 +150,13 @@ export const shareExcel = async (type, entityName, month, data) => {
         // Data
         data.forEach(item => {
             wsData.push([formatDate(item.date), item.guardName, item.startTime, item.endTime]);
+        });
+    } else if (type === 'Daily') {
+        // Headers
+        wsData.push(['Site Name', 'Guard Name', 'Time (In - Out)']);
+        // Data
+        data.forEach(item => {
+            wsData.push([item.siteName, item.guardName, `${item.startTime} - ${item.endTime}`]);
         });
     } else {
         // Guard-wise
