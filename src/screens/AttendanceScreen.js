@@ -33,6 +33,8 @@ export default function AttendanceScreen({ navigation }) {
     const [selectedSiteId, setSelectedSiteId] = useState('');
     const [selectedGuardId, setSelectedGuardId] = useState('');
 
+    const [hasManuallySelectedSite, setHasManuallySelectedSite] = useState(false);
+
     const [startTime, setStartTime] = useState(new Date(new Date().setHours(8, 0, 0, 0)));
     const [endTime, setEndTime] = useState(new Date(new Date().setHours(20, 0, 0, 0))); // Default 8pm
 
@@ -84,7 +86,8 @@ export default function AttendanceScreen({ navigation }) {
                 if (guard.defaultEndTime) setEndTime(parseTime(guard.defaultEndTime));
                 else setEndTime(new Date(new Date().setHours(20, 0, 0, 0)));
 
-                if (guard.defaultSiteId) {
+                // Only auto-fill site if user hasn't manually selected one
+                if (guard.defaultSiteId && !hasManuallySelectedSite) {
                     const siteExists = sites.find(s => s.id === guard.defaultSiteId);
                     if (siteExists) setSelectedSiteId(guard.defaultSiteId);
                 }
@@ -143,12 +146,18 @@ export default function AttendanceScreen({ navigation }) {
 
             // Reset selection for faster entry
             setSelectedGuardId('');
+            // Do NOT reset site, keep current selection context
             Alert.alert('Success', 'Attendance saved.');
         } catch (e) {
             Alert.alert('Error', e.message);
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleSiteChange = (siteId) => {
+        setSelectedSiteId(siteId);
+        setHasManuallySelectedSite(true);
     };
 
     return (
@@ -228,7 +237,7 @@ export default function AttendanceScreen({ navigation }) {
                             label="Site Location"
                             items={sites}
                             selectedValue={selectedSiteId}
-                            onValueChange={setSelectedSiteId}
+                            onValueChange={handleSiteChange}
                             placeholder="Select Site..."
                         />
 
