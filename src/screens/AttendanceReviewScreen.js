@@ -14,14 +14,20 @@ const formatDateHeader = (dateStr) => {
 
 export default function AttendanceReviewScreen({ route, navigation }) {
     const { date } = route.params;
-    const [attendanceList, setAttendanceList] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const [selectedIds, setSelectedIds] = useState(new Set());
+    const [isSelectionMode, setIsSelectionMode] = useState(false);
 
     const fetchAttendance = async () => {
         setLoading(true);
         try {
             const data = await getAttendanceByDate(date);
-            setAttendanceList(data);
+            // Sort by Site Name Alphabetically
+            const sortedData = data.sort((a, b) => {
+                const siteA = a.siteName || '';
+                const siteB = b.siteName || '';
+                return siteA.localeCompare(siteB);
+            });
+            setAttendanceList(sortedData);
         } catch (error) {
             console.error(error);
             Alert.alert('Error', 'Failed to fetch attendance');
@@ -33,13 +39,55 @@ export default function AttendanceReviewScreen({ route, navigation }) {
     useFocusEffect(
         useCallback(() => {
             fetchAttendance();
+            return () => {
+                setIsSelectionMode(false);
+                setSelectedIds(new Set());
+            };
         }, [])
     );
 
-    const handleDelete = (item) => {
+    const toggleSelection = (id) => {
+        const newSelected = new Set(selectedIds);
+        if (newSelected.has(id)) {
+            newSelected.delete(id);
+        } else {
+            newSelected.add(id);
+        }
+        setSelectedIds(newSelected);
+
+        if (newSelected.size === 0) {
+            setIsSelectionMode(false);
+        }
+    };
+
+    const handleLongPress = (id) => {
+        setIsSelectionMode(true);
+        toggleSelection(id);
+    };
+
+    const handlePress = (item) => {
+        if (isSelectionMode) {
+            toggleSelection(item.id);
+        } else {
+            // Optional: View details or do nothing
+        }
+    };
+
+    const handleSelectAll = () => {
+        if (selectedIds.size === attendanceList.length) {
+            setSelectedIds(new Set());
+            setIsSelectionMode(false);
+        } else {
+            const allIds = new Set(attendanceList.map(item => item.id));
+            setSelectedIds(allIds);
+            setIsSelectionMode(true);
+        }
+    };
+
+    const handleBulkDelete = () => {
         Alert.alert(
-            'Delete Attendance?',
-            `Are you sure you want to delete attendance for ${item.guardName}?`,
+            'Delete Selected?',
+            `Are you sure you want to delete ${selectedIds.size} records?`,
             [
                 { text: 'Cancel', style: 'cancel' },
                 {
@@ -47,11 +95,17 @@ export default function AttendanceReviewScreen({ route, navigation }) {
                     style: 'destructive',
                     onPress: async () => {
                         try {
-                            await deleteAttendance(item.id);
-                            fetchAttendance(); // Refresh list
-                            Alert.alert('Success', 'Attendance deleted');
+                            const idsToDelete = Array.from(selectedIds);
+                            await Promise.all(idsToDelete.map(id => deleteAttendance(id)));
+
+                            // Optimistic update or refetch
+                            setAttendanceList(prev => prev.filter(item => !selectedIds.has(item.id)));
+                            setIsSelectionMode(false);
+                            setSelectedIds(new Set());
+                            Alert.alert('Success', 'Records deleted');
                         } catch (error) {
-                            Alert.alert('Error', error.message);
+                            Alert.alert('Error', 'Failed to delete some records');
+                            fetchAttendance(); // Fallback
                         }
                     }
                 }
@@ -59,34 +113,67 @@ export default function AttendanceReviewScreen({ route, navigation }) {
         );
     };
 
-    const renderItem = ({ item }) => (
-        <Pressable
-            style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
-            onLongPress={() => handleDelete(item)}
-            delayLongPress={500}
-        >
-            <View style={styles.cardHeader}>
-                <Text style={styles.guardName}>{item.guardName}</Text>
-                <View style={styles.siteBadge}>
+    const renderItem = ({ item }) => {
+        const isSelected = selectedIds.has(item.id);
+        return (
+            <Pressable
+                style={({ pressed }) => [
+                    styles.card,
+                    pressed && styles.cardPressed,
+                    isSelected && styles.cardSelected
+                ]}
+                onLongPress={() => handleLongPress(item.id)}
+                onPress={() => handlePress(item)}
+                delayLongPress={300}
+            >
+                <View style={styles.cardHeader}>
+                    <Text style={styles.guardName}>{item.guardName}</Text>
+                    {isSelected && <MaterialIcons name="check-circle" size={20} color={theme.colors.primary} />}
+                    {!isSelected && isSelectionMode && <MaterialIcons name="radio-button-unchecked" size={20} color={theme.colors.slate300} />}
+                </View>
+
+                <View style={[styles.siteBadge, { alignSelf: 'flex-start', marginBottom: 8 }]}>
                     <Text style={styles.siteText}>{item.siteName || 'Unknown Site'}</Text>
                 </View>
-            </View>
-            <View style={styles.timeRow}>
-                <MaterialIcons name="access-time" size={16} color={theme.colors.slate500} />
-                <Text style={styles.timeText}>{item.startTime} - {item.endTime}</Text>
-            </View>
-            <Text style={styles.hintText}>Long press to delete</Text>
-        </Pressable>
-    );
+
+                <View style={styles.timeRow}>
+                    <MaterialIcons name="access-time" size={16} color={theme.colors.slate500} />
+                    <Text style={styles.timeText}>{item.startTime} - {item.endTime}</Text>
+                </View>
+            </Pressable>
+        );
+    };
 
     return (
         <SafeAreaView style={styles.container}>
             <View style={styles.header}>
-                <Pressable onPress={() => navigation.goBack()} style={styles.backButton}>
-                    <MaterialIcons name="arrow-back-ios" size={24} color={theme.colors.primary} />
+                <Pressable onPress={() => {
+                    if (isSelectionMode) {
+                        setIsSelectionMode(false);
+                        setSelectedIds(new Set());
+                    } else {
+                        navigation.goBack();
+                    }
+                }} style={styles.backButton}>
+                    <MaterialIcons name={isSelectionMode ? "close" : "arrow-back-ios"} size={24} color={theme.colors.primary} />
                 </Pressable>
-                <Text style={styles.headerTitle}>Attendance: {formatDateHeader(date)}</Text>
-                <View style={{ width: 40 }} />
+
+                <Text style={styles.headerTitle}>
+                    {isSelectionMode ? `${selectedIds.size} Selected` : `Attendance: ${formatDateHeader(date)}`}
+                </Text>
+
+                {isSelectionMode ? (
+                    <View style={{ flexDirection: 'row', gap: 16 }}>
+                        <Pressable onPress={handleSelectAll}>
+                            <MaterialIcons name="select-all" size={24} color={theme.colors.primary} />
+                        </Pressable>
+                        <Pressable onPress={handleBulkDelete}>
+                            <MaterialIcons name="delete" size={24} color={theme.colors.danger} />
+                        </Pressable>
+                    </View>
+                ) : (
+                    <View style={{ width: 40 }} />
+                )}
             </View>
 
             <FlatList
@@ -150,6 +237,11 @@ const styles = StyleSheet.create({
     },
     cardPressed: {
         backgroundColor: theme.colors.slate50,
+    },
+    cardSelected: {
+        backgroundColor: `${theme.colors.primary}1A`, // Light blue background
+        borderColor: theme.colors.primary,
+        borderWidth: 1.5,
     },
     cardHeader: {
         flexDirection: 'row',
