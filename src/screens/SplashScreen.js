@@ -1,6 +1,7 @@
+import Text from '../components/Text';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useEffect, useRef } from 'react';
-import { Animated, Dimensions, Image, StyleSheet, Text, View } from 'react-native';
+import { Animated, Dimensions, Image, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import ScreenWrapper from '../components/ScreenWrapper';
 import { getTheme } from '../theme';

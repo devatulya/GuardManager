@@ -1,3 +1,4 @@
+import Text from '../components/Text';
 /**
  * WelcomeScreen — Pixel-precise match to Stitch "GuardManager Welcome Onboarding"
  *

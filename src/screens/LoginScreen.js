@@ -1,3 +1,4 @@
+import Text from '../components/Text';
 /**
  * LoginScreen — Email and Password authentication
  * Pixel-faithful match to reference design (clay skeuomorphic aesthetic).

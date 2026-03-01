@@ -1,5 +1,6 @@
+import Text from '../../components/Text';
 import { useRef } from 'react';
-import { ActivityIndicator, Animated, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Animated, Pressable, StyleSheet, View } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
 
 /**

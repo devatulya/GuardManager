@@ -1,6 +1,7 @@
+import Text from '../components/Text';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import DateTimePickerField from '../components/DateTimePickerField';
 import ScreenWrapper from '../components/ScreenWrapper';
 import { addSite, updateSiteDetails } from '../services/sites';

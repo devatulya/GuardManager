@@ -1,3 +1,4 @@
+import Text from '../components/Text';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useState } from 'react';
 import {

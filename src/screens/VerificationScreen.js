@@ -1,3 +1,4 @@
+import Text from '../components/Text';
 /**
  * VerificationScreen — Verify Identity via 6-digit OTP
  * Pixel-faithful match to reference design.

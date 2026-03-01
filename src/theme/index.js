@@ -7,67 +7,56 @@
 // Base Palette
 // ----------------
 const baseColors = {
-  // User provided palette
-  mint: '#EFFFFB',
-  green: '#50D890',
-  blue: '#4F98CA',
+  bg: '#EFFFFB',
+  primary: '#50D890',
+  secondary: '#4F98CA',
   dark: '#272727',
-
-  white: '#ffffff',
-  black: '#000000',
-
-  slate200: '#e2e8f0',
-  slate300: '#cbd5e1',
-  slate500: '#64748b',
-
-  red500: '#ef4444',
 };
 
 // ----------------
 // Global Theme
 // ----------------
-// Flattening to one strict theme
 const appColors = {
   // Brand
-  primary: baseColors.green,
+  primary: baseColors.primary,
   primarySoft: 'rgba(80, 216, 144, 0.12)',
-  primaryVerify: baseColors.green,
-  accent: baseColors.blue,
+  primaryVerify: baseColors.primary,
+  accent: baseColors.secondary,
 
   // Surfaces
-  background: baseColors.mint,
-  surface: baseColors.white,
-  surfaceSolid: baseColors.white,
+  background: baseColors.bg,
+  surface: baseColors.bg,
+  surfaceSolid: baseColors.bg,
 
   // Text
   text: baseColors.dark,
-  textSecondary: baseColors.slate500,
-  textMuted: baseColors.slate300,
-  textInverse: baseColors.white,
+  textSecondary: baseColors.secondary,
+  textMuted: baseColors.secondary,
+  textInverse: baseColors.bg,
 
   // Borders
-  border: baseColors.slate200,
-  borderSoft: 'rgba(39, 39, 39, 0.1)',
-  borderHard: baseColors.slate200,
+  border: baseColors.secondary,
+  borderSoft: 'rgba(79, 152, 202, 0.3)',
+  borderHard: baseColors.secondary,
 
   // Status
-  success: baseColors.green,
-  danger: baseColors.red500,
+  success: baseColors.primary,
+  danger: baseColors.secondary, // Enforcing 4-color palette only
 
-  // ---- Legacy compatibility (DO NOT REMOVE)
-  backgroundLight: baseColors.mint,
+  // ---- Legacy compatibility
+  backgroundLight: baseColors.bg,
   backgroundDark: baseColors.dark,
-  cardBackground: baseColors.white,
-  headerBackground: baseColors.white,
-  white: baseColors.white,
+  cardBackground: baseColors.bg,
+  headerBackground: baseColors.bg,
+  white: baseColors.bg,
 
-  slate50: baseColors.mint,
-  slate100: baseColors.mint,
-  slate200: baseColors.slate200,
-  slate300: baseColors.slate300,
-  slate400: baseColors.slate300,
-  slate500: baseColors.slate500,
-  slate600: baseColors.slate500,
+  slate50: baseColors.bg,
+  slate100: baseColors.bg,
+  slate200: baseColors.secondary,
+  slate300: baseColors.secondary,
+  slate400: baseColors.secondary,
+  slate500: baseColors.dark,
+  slate600: baseColors.dark,
   slate700: baseColors.dark,
   slate800: baseColors.dark,
   slate900: baseColors.dark,
@@ -100,21 +89,18 @@ const borderRadius = {
 // Flat Shadows
 // ----------------
 const shadows = {
-  // Flat elevation based on the sketch layout
   clayRaised: {
-    shadowColor: '#000',
+    shadowColor: baseColors.dark,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
+    shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 2,
   },
-
   clayInset: {
-    shadowColor: 'transparent', // Stripped inset
+    shadowColor: 'transparent',
   },
-
   clayDeep: {
-    shadowColor: baseColors.green,
+    shadowColor: baseColors.primary,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.2,
     shadowRadius: 12,
@@ -123,32 +109,32 @@ const shadows = {
 };
 
 // ----------------
-// Skeuo Dummies (Prevents Legacy Crashes)
+// Skeuo Dummies
 // ----------------
 const skeuo = {
   colors: {
-    surfaceLight: baseColors.white,
-    surfaceDark: baseColors.mint,
-    divider: 'rgba(0,0,0,0.06)',
+    surfaceLight: baseColors.bg,
+    surfaceDark: baseColors.bg,
+    divider: 'rgba(39, 39, 39, 0.1)',
     text: baseColors.dark,
-    textSecondary: baseColors.slate500,
-    placeholder: baseColors.slate300,
+    textSecondary: baseColors.secondary,
+    placeholder: baseColors.secondary,
   },
   surface: {
-    backgroundColor: baseColors.white,
+    backgroundColor: baseColors.bg,
     borderTopWidth: 0,
-    borderBottomWidth: 1, borderBottomColor: baseColors.slate200,
+    borderBottomWidth: 1, borderBottomColor: baseColors.secondary,
   },
   inset: {
-    backgroundColor: baseColors.white,
-    borderTopWidth: 1, borderTopColor: baseColors.slate200,
+    backgroundColor: baseColors.bg,
+    borderTopWidth: 1, borderTopColor: baseColors.secondary,
     borderBottomWidth: 0,
     borderRadius: borderRadius.m,
   },
   btnPrimary: {
     borderTopWidth: 0,
     borderBottomWidth: 0,
-    shadowColor: baseColors.green,
+    shadowColor: baseColors.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 8,

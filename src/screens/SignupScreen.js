@@ -1,3 +1,4 @@
+import Text from '../components/Text';
 /**
  * SignupScreen — Faithful React Native conversion of Stitch design "Artistic Enterprise Signup Redesign"
  *
