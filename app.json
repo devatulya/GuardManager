@@ -7,7 +7,7 @@
     "icon": "./assets/logo.png",
     "scheme": "guardmanager",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "ios": {
       "supportsTablet": true
     },
@@ -37,6 +37,7 @@
       "eas": {
         "projectId": "0a404574-52cd-448f-9174-4ccd6f1ebc9e"
       }
-    }
+    },
+    "owner": "atulyasahu"
   }
 }

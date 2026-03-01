@@ -89,7 +89,13 @@ export const getAllAdvances = async (guardId = null, monthStr = null) => {
 
     // If filtered by guard, we need to sort manually since we removed orderBy
     if (guardId) {
-        data.sort(sortByDateDesc);
+        data.sort((a, b) => {
+            const dateA = a.date || '';
+            const dateB = b.date || '';
+            if (dateA > dateB) return -1;
+            if (dateA < dateB) return 1;
+            return 0;
+        });
     }
 
     return data;
