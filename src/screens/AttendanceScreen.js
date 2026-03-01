@@ -1,4 +1,3 @@
-import Text from '../components/Text';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -6,6 +5,7 @@ import { ActivityIndicator, Alert, Modal, Pressable, ScrollView, StyleSheet, Vie
 import DateTimePickerField from '../components/DateTimePickerField';
 import ScreenWrapper from '../components/ScreenWrapper';
 import SearchablePicker from '../components/SearchablePicker';
+import Text from '../components/Text';
 import { useTheme } from '../context/ThemeContext';
 import { getAttendanceByDate, getAttendanceProgress, markAttendance, markBulkCustomAttendance, markGlobalAttendance } from '../services/attendance';
 import { getGuards } from '../services/guards';
@@ -129,9 +129,16 @@ export default function AttendanceScreen({ navigation }) {
             const prevDateStr = getLocalISODate(yesterday);
 
             const records = await getAttendanceByDate(prevDateStr);
-            setPreviousAttendance(records || []);
+            const sortedRecords = (records || []).sort((a, b) => {
+                const siteA = a.siteName ? a.siteName.toLowerCase() : '';
+                const siteB = b.siteName ? b.siteName.toLowerCase() : '';
+                if (siteA < siteB) return -1;
+                if (siteA > siteB) return 1;
+                return 0;
+            });
+            setPreviousAttendance(sortedRecords);
             // By default, select all
-            setSelectedToCopy(new Set((records || []).map(r => r.id)));
+            setSelectedToCopy(new Set(sortedRecords.map(r => r.id)));
         } catch (e) {
             Alert.alert("Error", "Could not fetch previous day's attendance.");
             setShowCopyModal(false);
@@ -789,7 +796,7 @@ const getStyles = (theme) => StyleSheet.create({
     },
     modalListItemSelected: {
         borderColor: theme.colors.primary,
-        backgroundColor: `${theme.colors.primary}0D`,
+        borderWidth: 2,
     },
     modalListItemTextContainer: {
         flex: 1,

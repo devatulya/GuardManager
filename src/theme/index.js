@@ -42,6 +42,7 @@ const appColors = {
   // Status
   success: baseColors.primary,
   danger: baseColors.secondary, // Enforcing 4-color palette only
+  error: '#ef4444',             // Explicit red for negative values
 
   // ---- Legacy compatibility
   backgroundLight: baseColors.bg,

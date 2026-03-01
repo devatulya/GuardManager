@@ -1,4 +1,3 @@
-import Text from '../components/Text';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback, useMemo, useState } from 'react';
@@ -6,6 +5,7 @@ import { ActivityIndicator, Alert, FlatList, Pressable, StyleSheet, View } from 
 import DateTimePickerField from '../components/DateTimePickerField';
 import ScreenWrapper from '../components/ScreenWrapper';
 import SearchablePicker from '../components/SearchablePicker';
+import Text from '../components/Text';
 import { useTheme } from '../context/ThemeContext';
 import { deleteAdvance, getAllAdvances } from '../services/advances';
 import { getGuards } from '../services/guards';
@@ -325,13 +325,12 @@ const getStyles = (theme) => StyleSheet.create({
     amountText: {
         fontSize: 14,
         fontWeight: 'bold',
-        color: theme.colors.danger,
+        color: theme.colors.error || theme.colors.danger,
     },
     typeText: {
         fontSize: 10,
         fontWeight: 'bold',
         color: theme.colors.textSecondary,
-        marginTop: 2,
     },
     emptyContainer: {
         padding: 24,

@@ -326,7 +326,7 @@ export const shareAdvancesPDF = async (advancesList, totalAmount, monthStr) => {
             <tr>
                 <td>${item.guardName || 'Unknown'}</td>
                 <td>${item.date}</td>
-                <td style="text-align: right; color: #d9534f; font-weight: bold;">-₹${Number(item.amount).toFixed(2)}</td>
+                <td style="text-align: right; color: #ef4444; font-weight: bold;">-₹${Number(item.amount).toFixed(2)}</td>
             </tr>
         `).join('');
 
