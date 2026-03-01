@@ -1,8 +1,8 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import DateTimePickerField from '../components/DateTimePickerField';
+import ScreenWrapper from '../components/ScreenWrapper';
 import SearchablePicker from '../components/SearchablePicker';
 import { addGuard, updateGuardDetails } from '../services/guards';
 import { getSites } from '../services/sites';
@@ -29,7 +29,7 @@ const SitePicker = ({ selectedSiteId, onSelect, sites }) => {
                 <MaterialIcons name="arrow-drop-down" size={24} color={theme.colors.slate500} />
             </Pressable>
             <Modal visible={visible} animationType="slide">
-                <SafeAreaView style={{ flex: 1 }}>
+                <ScreenWrapper edges={['top', 'left', 'right']} style={{ flex: 1 }}>
                     <View style={styles.modalHeader}>
                         <Text style={styles.modalTitle}>Select Site</Text>
                         <Pressable onPress={() => setVisible(false)}><MaterialIcons name="close" size={24} /></Pressable>
@@ -43,7 +43,7 @@ const SitePicker = ({ selectedSiteId, onSelect, sites }) => {
                             </Pressable>
                         )}
                     />
-                </SafeAreaView>
+                </ScreenWrapper>
             </Modal>
         </>
     );
@@ -57,6 +57,7 @@ export default function AddGuardScreen({ navigation, route }) {
     const [phone, setPhone] = useState(guard?.phone || '');
     const [siteId, setSiteId] = useState(guard?.defaultSiteId || null);
     const [siteName, setSiteName] = useState(guard?.defaultSiteName || '');
+    const [shiftType, setShiftType] = useState(guard?.shiftType || 'Day');
 
     // Parse time strings back to Date objects for picker
     const parseTime = (timeStr) => {
@@ -95,6 +96,7 @@ export default function AddGuardScreen({ navigation, route }) {
                 phone,
                 defaultSiteId: siteId,
                 defaultSiteName: siteName,
+                shiftType,
                 defaultStartTime: formatTime(startTime),
                 defaultEndTime: formatTime(endTime),
                 monthlySalary: parseFloat(salary) || 0,
@@ -120,7 +122,7 @@ export default function AddGuardScreen({ navigation, route }) {
     };
 
     return (
-        <SafeAreaView style={styles.container}>
+        <ScreenWrapper edges={['top', 'left', 'right']} style={styles.container}>
             <View style={styles.header}>
                 <Pressable onPress={() => navigation.goBack()} style={styles.backButton}>
                     <MaterialIcons name="arrow-back-ios" size={24} color={theme.colors.primary} />
@@ -197,6 +199,28 @@ export default function AddGuardScreen({ navigation, route }) {
                         </View>
                     </View>
 
+                    {/* Shift Type Selector */}
+                    <View style={styles.inputGroup}>
+                        <Text style={styles.label}>Shift Type</Text>
+                        <View style={styles.segmentedControl}>
+                            <Pressable
+                                style={[styles.segmentButton, shiftType === 'Day' && styles.segmentButtonActive]}
+                                onPress={() => setShiftType('Day')}
+                            >
+                                <MaterialIcons name="wb-sunny" size={20} color={shiftType === 'Day' ? theme.colors.primary : theme.colors.slate500} style={{ marginRight: 8 }} />
+                                <Text style={[styles.segmentText, shiftType === 'Day' && styles.segmentTextActive]}>Day Shift</Text>
+                            </Pressable>
+
+                            <Pressable
+                                style={[styles.segmentButton, shiftType === 'Night' && styles.segmentButtonActive]}
+                                onPress={() => setShiftType('Night')}
+                            >
+                                <MaterialIcons name="nights-stay" size={20} color={shiftType === 'Night' ? '#3b82f6' : theme.colors.slate500} style={{ marginRight: 8 }} />
+                                <Text style={[styles.segmentText, shiftType === 'Night' && { color: '#3b82f6' }]}>Night Shift</Text>
+                            </Pressable>
+                        </View>
+                    </View>
+
                     <View style={styles.separator} />
 
                     <View style={styles.section}>
@@ -251,7 +275,7 @@ export default function AddGuardScreen({ navigation, route }) {
                     )}
                 </Pressable>
             </View>
-        </SafeAreaView>
+        </ScreenWrapper>
     );
 }
 
@@ -442,5 +466,31 @@ const styles = StyleSheet.create({
     },
     modalItemText: {
         fontSize: 16,
+    },
+    segmentedControl: {
+        flexDirection: 'row',
+        backgroundColor: theme.colors.slate100,
+        borderRadius: theme.borderRadius.l,
+        padding: 4,
+        height: 56,
+    },
+    segmentButton: {
+        flex: 1,
+        flexDirection: 'row',
+        borderRadius: theme.borderRadius.m,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    segmentButtonActive: {
+        backgroundColor: theme.colors.white,
+        ...theme.shadows.clayRaised,
+    },
+    segmentText: {
+        fontSize: 15,
+        fontWeight: '600',
+        color: theme.colors.slate500,
+    },
+    segmentTextActive: {
+        color: theme.colors.primary,
     },
 });

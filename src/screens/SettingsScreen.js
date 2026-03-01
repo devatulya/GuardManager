@@ -1,7 +1,7 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { useMemo } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import ScreenWrapper from '../components/ScreenWrapper';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 
@@ -32,7 +32,7 @@ export default function SettingsScreen() {
     };
 
     return (
-        <SafeAreaView style={styles.container}>
+        <ScreenWrapper edges={['top', 'left', 'right']} style={styles.container}>
             <View style={styles.header}>
                 <Text style={styles.headerTitle}>Settings</Text>
             </View>
@@ -80,7 +80,7 @@ export default function SettingsScreen() {
 
                 <Text style={styles.version}>Version 1.0.0</Text>
             </ScrollView>
-        </SafeAreaView>
+        </ScreenWrapper>
     );
 }
 
@@ -111,13 +111,9 @@ const getStyles = (theme) => StyleSheet.create({
         borderRadius: theme.borderRadius.xl,
         padding: theme.spacing.l,
         marginBottom: theme.spacing.l,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 4,
-        elevation: 2,
         borderWidth: 1,
         borderColor: theme.colors.border,
+        ...theme.shadows.clayRaised,
     },
     avatar: {
         width: 64,
@@ -167,6 +163,7 @@ const getStyles = (theme) => StyleSheet.create({
         marginBottom: theme.spacing.l,
         borderWidth: 1,
         borderColor: theme.colors.border,
+        ...theme.shadows.clayRaised,
     },
     sectionTitle: {
         fontSize: 14,

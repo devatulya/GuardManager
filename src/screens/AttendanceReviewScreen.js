@@ -2,7 +2,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback, useMemo, useState } from 'react';
 import { Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import ScreenWrapper from '../components/ScreenWrapper';
 import { useTheme } from '../context/ThemeContext';
 import { deleteAttendance, getAttendanceByDate } from '../services/attendance';
 
@@ -141,15 +141,21 @@ export default function AttendanceReviewScreen({ route, navigation }) {
                 </View>
 
                 <View style={styles.timeRow}>
-                    <MaterialIcons name="access-time" size={16} color={theme.colors.slate500} />
-                    <Text style={styles.timeText}>{item.startTime} - {item.endTime}</Text>
+                    <MaterialIcons
+                        name={item.shiftType === 'Night' ? 'nights-stay' : 'wb-sunny'}
+                        size={16}
+                        color={theme.colors.slate500}
+                    />
+                    <Text style={styles.timeText}>
+                        {item.shiftType === 'Night' ? 'Night Shift' : 'Day Shift'}
+                    </Text>
                 </View>
             </Pressable>
         );
     };
 
     return (
-        <SafeAreaView style={styles.container}>
+        <ScreenWrapper edges={['top', 'left', 'right']} style={styles.container}>
             <View style={styles.header}>
                 <Pressable onPress={() => {
                     if (isSelectionMode) {
@@ -196,7 +202,7 @@ export default function AttendanceReviewScreen({ route, navigation }) {
                     )
                 }
             />
-        </SafeAreaView>
+        </ScreenWrapper>
     );
 }
 

@@ -2,7 +2,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback, useMemo, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import ScreenWrapper from '../components/ScreenWrapper';
 import { useTheme } from '../context/ThemeContext';
 import { getGuards } from '../services/guards';
 
@@ -61,7 +61,7 @@ export default function GuardsListScreen({ navigation }) {
     );
 
     return (
-        <SafeAreaView style={styles.container}>
+        <ScreenWrapper edges={['top', 'left', 'right']} style={styles.container}>
             <View style={styles.header}>
                 <View style={styles.headerTop}>
                     <MaterialIcons name="menu" size={28} color={theme.colors.text} />
@@ -102,7 +102,7 @@ export default function GuardsListScreen({ navigation }) {
             >
                 <MaterialIcons name="add" size={30} color={theme.colors.white} />
             </Pressable>
-        </SafeAreaView>
+        </ScreenWrapper>
     );
 }
 
@@ -161,11 +161,7 @@ const getStyles = (theme) => StyleSheet.create({
         borderRadius: theme.borderRadius.l,
         borderWidth: 1,
         borderColor: theme.colors.border,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.05,
-        shadowRadius: 2,
-        elevation: 1,
+        ...theme.shadows.clayRaised,
     },
     cardContent: {
         flexDirection: 'row',

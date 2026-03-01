@@ -1,8 +1,32 @@
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /supervisors/{userId}/{document=**} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+
+    // ─────────────────────────────────────────────────────────────
+    // Supervisor-scoped access
+    // supervisorId === Firebase Auth UID
+    // ─────────────────────────────────────────────────────────────
+    match /supervisors/{supervisorId} {
+
+      // Supervisor can read/write their own root profile document
+      allow read, write: if request.auth != null
+                         && request.auth.uid == supervisorId;
+
+      // Supervisor can read/write all subcollections under their document
+      // This covers: guards, sites, attendance, advances, reports, etc.
+      match /{document=**} {
+        allow read, write: if request.auth != null
+                           && request.auth.uid == supervisorId;
+      }
     }
+
+    // ─────────────────────────────────────────────────────────────
+    // Deny everything else — no public access, no unauthenticated access
+    // ─────────────────────────────────────────────────────────────
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
   }
 }

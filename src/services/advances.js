@@ -58,24 +58,31 @@ export const getRecentAdvances = async (limitCount = 10) => {
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 };
 
-export const getAllAdvances = async (guardId = null) => {
+export const getAllAdvances = async (guardId = null, monthStr = null) => {
     const advancesRef = getScopedCollection('advances');
-    let q;
+    let baseQueryArgs = [advancesRef];
 
-    // Sort logic helper
-    const sortByDateDesc = (a, b) => {
-        if (a.date < b.date) return 1;
-        if (a.date > b.date) return -1;
-        return 0;
-    };
-
+    // Build constraints dynamically
     if (guardId) {
-        // Filter by guard ONLY (avoid composite index requirement)
-        q = query(advancesRef, where('guardId', '==', guardId));
-    } else {
-        // All guards, order by date desc (single field index works automatically)
-        q = query(advancesRef, orderBy('date', 'desc'));
+        baseQueryArgs.push(where('guardId', '==', guardId));
     }
+
+    if (monthStr) {
+        const startDate = `${monthStr}-01`;
+        const [year, month] = monthStr.split('-').map(Number);
+        const lastDay = new Date(year, month, 0).getDate();
+        const endDate = `${monthStr}-${lastDay}`;
+
+        baseQueryArgs.push(where('date', '>=', startDate));
+        baseQueryArgs.push(where('date', '<=', endDate));
+    }
+
+    // Add ordering if we aren't filtering by guard (single index)
+    if (!guardId) {
+        baseQueryArgs.push(orderBy('date', 'desc'));
+    }
+
+    const q = query(...baseQueryArgs);
 
     const snapshot = await getDocs(q);
     const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));

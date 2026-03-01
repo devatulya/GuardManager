@@ -1,10 +1,35 @@
 import { MaterialIcons } from '@expo/vector-icons';
-import { Alert, FlatList, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useMemo } from 'react';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import ScreenWrapper from '../components/ScreenWrapper';
 import { theme } from '../theme';
 
 import { shareExcel, sharePDF } from '../services/reporting';
 import { formatDate } from '../utils/date';
+
+// Helper to convert legacy explicit times to Shift Type
+export const parseLegacyShift = (item) => {
+    if (item.shiftType) {
+        return item.shiftType === 'Day' ? 'Day Shift' : 'Night Shift';
+    }
+
+    // Fallback parsing for legacy "startTime" and "endTime"
+    if (!item.startTime || !item.endTime || item.startTime === '-' || item.endTime === '-') {
+        return '-';
+    }
+
+    // Usually 08:00 to 20:00 is Day, 20:00 to 08:00 is Night
+    // We'll check the start time hour
+    const startHour = parseInt(item.startTime.split(':')[0], 10);
+
+    // The user requested: 8am to 8pm is Day Shift, 8pm to 8am is Night Shift.
+    // 08:00 (inclusive) up to 20:00 (exclusive of 20:xx starting hours unless exact 20:00, but logic dictates >= 8 and < 20 for standard)
+    if (startHour >= 8 && startHour < 20) {
+        return 'Day Shift';
+    } else {
+        return 'Night Shift';
+    }
+};
 
 export default function ReportResultsScreen({ route, navigation }) {
     const { type, entityName, month, data } = route.params || {};
@@ -27,6 +52,58 @@ export default function ReportResultsScreen({ route, navigation }) {
         );
     };
 
+    // Calculate Site-wise report summary
+    const siteSummary = useMemo(() => {
+        if (type !== 'Site-wise' || !data) return null;
+
+        const dutiesCount = data.length;
+        const guardMap = {};
+        const groupedByDate = {};
+
+        data.forEach(item => {
+            // Guard duty count
+            guardMap[item.guardName] = (guardMap[item.guardName] || 0) + 1;
+
+            // Group by Date
+            if (!groupedByDate[item.date]) groupedByDate[item.date] = [];
+            groupedByDate[item.date].push(item);
+        });
+
+        const sortedDates = Object.keys(groupedByDate).sort();
+        const groupedData = sortedDates.map(date => ({
+            date,
+            records: groupedByDate[date].sort((a, b) => a.guardName.localeCompare(b.guardName))
+        }));
+
+        return {
+            totalDuties: dutiesCount,
+            totalGuards: Object.keys(guardMap).length,
+            guardDuties: Object.entries(guardMap).map(([name, count]) => ({ name, count })),
+            groupedData
+        };
+    }, [data, type]);
+
+    // Calculate Daily report summary (Grouped by Site)
+    const dailySummary = useMemo(() => {
+        if (type !== 'Daily' || !data) return null;
+
+        const groupedBySite = {};
+
+        data.forEach(item => {
+            if (!groupedBySite[item.siteName]) groupedBySite[item.siteName] = [];
+            groupedBySite[item.siteName].push(item);
+        });
+
+        const sortedSites = Object.keys(groupedBySite).sort();
+        const groupedData = sortedSites.map(siteName => ({
+            siteName,
+            records: groupedBySite[siteName].sort((a, b) => a.guardName.localeCompare(b.guardName))
+        }));
+
+        return {
+            groupedData
+        };
+    }, [data, type]);
     const renderSiteReportItem = ({ item }) => (
         <View style={styles.rowItem}>
             <View style={styles.colDate}><Text style={styles.cellText}>{formatDate(item.date)}</Text></View>
@@ -40,7 +117,7 @@ export default function ReportResultsScreen({ route, navigation }) {
         <View style={styles.rowItem}>
             <View style={styles.colLarge}><Text style={styles.cellText}>{item.siteName}</Text></View>
             <View style={styles.colMedium}><Text style={styles.cellText}>{item.guardName}</Text></View>
-            <View style={styles.colTimeRange}><Text style={styles.cellText}>{item.startTime} - {item.endTime}</Text></View>
+            <View style={styles.colTimeRange}><Text style={styles.cellText}>{parseLegacyShift(item)}</Text></View>
         </View>
     );
 
@@ -76,15 +153,13 @@ export default function ReportResultsScreen({ route, navigation }) {
                 <View style={styles.tableHeader}>
                     <Text style={[styles.headerCell, styles.colDate]}>Date</Text>
                     <Text style={[styles.headerCell, styles.colLarge]}>Site</Text>
-                    <Text style={[styles.headerCell, styles.colTime]}>In</Text>
-                    <Text style={[styles.headerCell, styles.colTime]}>Out</Text>
+                    <Text style={[styles.headerCell, styles.colTimeRange]}>Shift</Text>
                 </View>
                 {data.attendance.map((item, index) => (
                     <View key={index} style={styles.rowItem}>
                         <View style={styles.colDate}><Text style={styles.cellText}>{formatDate(item.date)}</Text></View>
                         <View style={styles.colLarge}><Text style={styles.cellText}>{item.siteName}</Text></View>
-                        <View style={styles.colTime}><Text style={styles.cellText}>{item.startTime}</Text></View>
-                        <View style={styles.colTime}><Text style={styles.cellText}>{item.endTime}</Text></View>
+                        <View style={styles.colTimeRange}><Text style={styles.cellText}>{parseLegacyShift(item)}</Text></View>
                     </View>
                 ))}
             </ScrollView>
@@ -92,7 +167,7 @@ export default function ReportResultsScreen({ route, navigation }) {
     };
 
     return (
-        <SafeAreaView style={styles.container}>
+        <ScreenWrapper edges={['top', 'left', 'right']} style={styles.container}>
             <View style={styles.header}>
                 <Pressable onPress={() => navigation.goBack()} style={styles.backBtn}>
                     <MaterialIcons name="arrow-back" size={24} color="black" />
@@ -108,44 +183,95 @@ export default function ReportResultsScreen({ route, navigation }) {
             </View>
 
             <View style={styles.content}>
-                {type === 'Site-wise' ? (
-                    <>
-                        <View style={styles.tableHeader}>
-                            <Text style={[styles.headerCell, styles.colDate]}>Date</Text>
-                            <Text style={[styles.headerCell, styles.colLarge]}>Guard</Text>
-                            <Text style={[styles.headerCell, styles.colTime]}>In</Text>
-                            <Text style={[styles.headerCell, styles.colTime]}>Out</Text>
+                {type === 'Site-wise' && siteSummary ? (
+                    <ScrollView style={styles.guardContainer}>
+                        <View style={styles.summaryCard}>
+                            <Text style={styles.summaryTitle}>Site Name - {entityName}</Text>
+                            <View style={[styles.summaryRow, { marginTop: 8 }]}>
+                                <Text style={styles.summaryLabel}>Total duties done -</Text>
+                                <Text style={styles.summaryValue}>{siteSummary.totalDuties}</Text>
+                            </View>
+                            <View style={styles.summaryRow}>
+                                <Text style={styles.summaryLabel}>Total Guard worked -</Text>
+                                <Text style={styles.summaryValue}>{siteSummary.totalGuards}</Text>
+                            </View>
+                            <View style={{ marginTop: 8, paddingLeft: 16 }}>
+                                {siteSummary.guardDuties.map((g, idx) => (
+                                    <Text key={idx} style={{ color: theme.colors.slate600, fontSize: 13, marginBottom: 4 }}>
+                                        {g.name} - {g.count} duties
+                                    </Text>
+                                ))}
+                            </View>
                         </View>
-                        <FlatList
-                            data={data}
-                            renderItem={renderSiteReportItem}
-                            keyExtractor={(item, index) => index.toString()}
-                        />
-                    </>
+
+                        <Text style={styles.sectionHeader}>Grouped by Date</Text>
+                        {siteSummary.groupedData.map((group, gIdx) => (
+                            <View key={gIdx} style={{ marginBottom: 16 }}>
+                                <View style={[styles.tableHeader, { backgroundColor: theme.colors.slate200 }]}>
+                                    <Text style={[styles.headerCell, { flex: 1 }]}>{formatDate(group.date)} -</Text>
+                                </View>
+                                {group.records.map((item, rIdx) => {
+                                    const formattedShift = parseLegacyShift(item);
+
+                                    return (
+                                        <View key={rIdx} style={[styles.rowItem, { paddingVertical: 8 }]}>
+                                            <View style={{ flex: 1.5, paddingLeft: 8 }}>
+                                                <Text style={styles.cellText}>{item.guardName}</Text>
+                                            </View>
+                                            <View style={{ flex: 1 }}>
+                                                <Text style={[styles.cellText, { color: theme.colors.slate600 }]}>{formattedShift}</Text>
+                                            </View>
+                                        </View>
+                                    );
+                                })}
+                            </View>
+                        ))}
+                    </ScrollView>
                 ) : type === 'Daily' ? (
                     <>
                         {data.length === 0 ? (
                             <Text style={styles.noDataText}>No attendance records found for this date.</Text>
                         ) : (
-                            <>
-                                <View style={styles.tableHeader}>
-                                    <Text style={[styles.headerCell, styles.colLarge]}>Site Name</Text>
-                                    <Text style={[styles.headerCell, styles.colMedium]}>Guard Name</Text>
-                                    <Text style={[styles.headerCell, styles.colTimeRange]}>Time</Text>
+                            <ScrollView style={styles.guardContainer}>
+                                <View style={[styles.tableHeader, { backgroundColor: theme.colors.slate200, marginBottom: 16 }]}>
+                                    <Text style={[styles.headerCell, { flex: 1, fontSize: 14 }]}>Date - {month}</Text>
                                 </View>
-                                <FlatList
-                                    data={data}
-                                    renderItem={renderDailyReportItem}
-                                    keyExtractor={(item, index) => index.toString()}
-                                />
-                            </>
+
+                                {dailySummary?.groupedData.map((group, gIdx) => (
+                                    <View key={gIdx} style={{ marginBottom: 20 }}>
+                                        <View style={{ marginBottom: 8 }}>
+                                            <Text style={{ fontSize: 15, fontWeight: 'bold', color: theme.colors.slate800, paddingLeft: 8 }}>
+                                                Site Name - {group.siteName}
+                                            </Text>
+                                        </View>
+                                        <View style={[styles.tableHeader, { backgroundColor: 'transparent', borderBottomWidth: 1, borderColor: '#eee', paddingBottom: 4, paddingTop: 4 }]}>
+                                            <Text style={[styles.headerCell, { flex: 1.5, paddingLeft: 8 }]}>Guards -</Text>
+                                            <Text style={[styles.headerCell, { flex: 1 }]}>Shift</Text>
+                                        </View>
+
+                                        {group.records.map((item, rIdx) => {
+                                            const formattedShift = parseLegacyShift(item);
+                                            return (
+                                                <View key={rIdx} style={[styles.rowItem, { paddingVertical: 8, borderBottomWidth: 0 }]}>
+                                                    <View style={{ flex: 1.5, paddingLeft: 16 }}>
+                                                        <Text style={styles.cellText}>{item.guardName}</Text>
+                                                    </View>
+                                                    <View style={{ flex: 1 }}>
+                                                        <Text style={[styles.cellText, { color: theme.colors.slate600 }]}>{formattedShift}</Text>
+                                                    </View>
+                                                </View>
+                                            );
+                                        })}
+                                    </View>
+                                ))}
+                            </ScrollView>
                         )}
                     </>
                 ) : (
                     renderGuardReport()
                 )}
             </View>
-        </SafeAreaView>
+        </ScreenWrapper>
     );
 }
 

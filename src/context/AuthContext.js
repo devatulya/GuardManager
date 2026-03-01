@@ -2,7 +2,11 @@ import {
     createUserWithEmailAndPassword,
     GoogleAuthProvider,
     onAuthStateChanged,
+    PhoneAuthProvider,
+    sendPasswordResetEmail,
+    signInWithCredential,
     signInWithEmailAndPassword,
+    signInWithPhoneNumber,
     signInWithPopup,
     signOut
 } from 'firebase/auth';
@@ -22,7 +26,6 @@ export const AuthProvider = ({ children }) => {
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-            setUser(currentUser);
             if (currentUser) {
                 // Fetch profile to see if setup is complete
                 try {
@@ -30,10 +33,12 @@ export const AuthProvider = ({ children }) => {
                     setProfile(userProfile);
                 } catch (e) {
                     console.error("Error fetching profile on auth change:", e);
+                    setProfile(null);
                 }
             } else {
                 setProfile(null);
             }
+            setUser(currentUser);
             setLoading(false);
         });
         return unsubscribe;
@@ -61,12 +66,40 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
+    const sendOTP = async (phoneNumber, recaptchaVerifier) => {
+        try {
+            const confirmationResult = await signInWithPhoneNumber(auth, phoneNumber, recaptchaVerifier);
+            return confirmationResult.verificationId;
+        } catch (error) {
+            console.error("sendOTP Error:", error);
+            throw error;
+        }
+    };
+
+    const confirmOTP = async (verificationId, code) => {
+        try {
+            const credential = PhoneAuthProvider.credential(verificationId, code);
+            return await signInWithCredential(auth, credential);
+        } catch (error) {
+            console.error("confirmOTP Error:", error);
+            throw error;
+        }
+    };
+
+    const resetPassword = (email) => {
+        return sendPasswordResetEmail(auth, email);
+    };
+
     const logout = async () => {
         await signOut(auth);
     };
 
     return (
-        <AuthContext.Provider value={{ user, profile, setProfile, loading, login, signup, googleLogin, logout }}>
+        <AuthContext.Provider value={{
+            user, profile, setProfile, loading,
+            login, signup, googleLogin, logout,
+            sendOTP, confirmOTP, resetPassword
+        }}>
             {!loading && children}
         </AuthContext.Provider>
     );

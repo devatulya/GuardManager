@@ -1,8 +1,8 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import DateTimePickerField from '../components/DateTimePickerField';
+import ScreenWrapper from '../components/ScreenWrapper';
 import { addSite, updateSiteDetails } from '../services/sites';
 import { theme } from '../theme';
 
@@ -12,6 +12,7 @@ export default function AddSiteScreen({ navigation, route }) {
 
     const [name, setName] = useState(site?.name || '');
     const [address, setAddress] = useState(site?.address || '');
+    const [shiftType, setShiftType] = useState(site?.shiftType || 'Day');
 
     // Parse time strings back to Date
     const parseTime = (timeStr) => {
@@ -39,6 +40,7 @@ export default function AddSiteScreen({ navigation, route }) {
             const siteData = {
                 name,
                 address,
+                shiftType,
                 defaultShiftStart: formatTime(startTime),
                 defaultShiftEnd: formatTime(endTime),
             };
@@ -63,7 +65,7 @@ export default function AddSiteScreen({ navigation, route }) {
     };
 
     return (
-        <SafeAreaView style={styles.container}>
+        <ScreenWrapper edges={['top', 'left', 'right']} style={styles.container}>
             <View style={styles.header}>
                 <Pressable onPress={() => navigation.goBack()} style={styles.backButton}>
                     <MaterialIcons name="arrow-back-ios" size={24} color={theme.colors.primary} />
@@ -113,6 +115,28 @@ export default function AddSiteScreen({ navigation, route }) {
                             />
                         </View>
                     </View>
+
+                    {/* Shift Type Selector */}
+                    <View style={styles.inputGroup}>
+                        <Text style={styles.label}>Default Shift Mode</Text>
+                        <View style={styles.segmentedControl}>
+                            <Pressable
+                                style={[styles.segmentButton, shiftType === 'Day' && styles.segmentButtonActive]}
+                                onPress={() => setShiftType('Day')}
+                            >
+                                <MaterialIcons name="wb-sunny" size={20} color={shiftType === 'Day' ? theme.colors.primary : theme.colors.slate500} style={{ marginRight: 8 }} />
+                                <Text style={[styles.segmentText, shiftType === 'Day' && styles.segmentTextActive]}>Day Shift</Text>
+                            </Pressable>
+
+                            <Pressable
+                                style={[styles.segmentButton, shiftType === 'Night' && styles.segmentButtonActive]}
+                                onPress={() => setShiftType('Night')}
+                            >
+                                <MaterialIcons name="nights-stay" size={20} color={shiftType === 'Night' ? '#3b82f6' : theme.colors.slate500} style={{ marginRight: 8 }} />
+                                <Text style={[styles.segmentText, shiftType === 'Night' && { color: '#3b82f6' }]}>Night Shift</Text>
+                            </Pressable>
+                        </View>
+                    </View>
                 </View>
             </ScrollView>
 
@@ -132,7 +156,7 @@ export default function AddSiteScreen({ navigation, route }) {
                     )}
                 </Pressable>
             </View>
-        </SafeAreaView>
+        </ScreenWrapper>
     );
 }
 
@@ -219,5 +243,32 @@ const styles = StyleSheet.create({
         color: theme.colors.white,
         fontSize: 16,
         fontWeight: 'bold',
+    },
+    segmentedControl: {
+        flexDirection: 'row',
+        backgroundColor: theme.colors.slate100,
+        borderRadius: theme.borderRadius.l,
+        padding: 4,
+        height: 56,
+        marginTop: 8,
+    },
+    segmentButton: {
+        flex: 1,
+        flexDirection: 'row',
+        borderRadius: theme.borderRadius.m,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    segmentButtonActive: {
+        backgroundColor: theme.colors.white,
+        ...theme.shadows.clayRaised,
+    },
+    segmentText: {
+        fontSize: 15,
+        fontWeight: '600',
+        color: theme.colors.slate500,
+    },
+    segmentTextActive: {
+        color: theme.colors.primary,
     },
 });

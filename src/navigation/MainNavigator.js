@@ -38,9 +38,28 @@ function PayrollNavigator() {
 
 const Tab = createMaterialTopTabNavigator();
 
+const TAB_ICONS = {
+    Home: 'dashboard',
+    PayrollTab: 'account-balance-wallet',
+    GuardsTab: 'groups',
+    SitesTab: 'domain',
+    ReportsTab: 'assignment',
+};
+
+const TAB_LABELS = {
+    Home: 'Home',
+    PayrollTab: 'Payroll',
+    GuardsTab: 'Guards',
+    SitesTab: 'Sites',
+    ReportsTab: 'Reports',
+};
+
 export default function MainNavigator() {
     const insets = useSafeAreaInsets();
-    const { theme } = useTheme();
+    const { theme, isDark } = useTheme();
+
+    const TAB_BAR_HEIGHT = 64;
+    const TOTAL_HEIGHT = TAB_BAR_HEIGHT + insets.bottom;
 
     return (
         <Tab.Navigator
@@ -49,68 +68,48 @@ export default function MainNavigator() {
                 swipeEnabled: true,
                 tabBarShowLabel: true,
                 tabBarActiveTintColor: theme.colors.primary,
-                tabBarInactiveTintColor: theme.colors.slate400,
-                tabBarIndicatorStyle: {
-                    backgroundColor: theme.colors.primary,
-                    height: 3,
-                    top: 0, // Indicator at top of the bottom bar
-                },
+                tabBarInactiveTintColor: theme.colors.textSecondary,
+                // Hide default sliding indicator — active state shown via icon/label color
+                tabBarIndicatorStyle: { height: 0 },
                 tabBarStyle: {
-                    backgroundColor: theme.colors.headerBackground,
-                    borderTopWidth: 1,
-                    borderTopColor: theme.colors.border,
-                    elevation: 8,
+                    backgroundColor: theme.colors.surfaceSolid,
+                    borderTopWidth: 0,
+                    height: TOTAL_HEIGHT,
+                    paddingBottom: insets.bottom,
+                    // Clay upward shadow
                     shadowColor: '#000',
-                    shadowOffset: { width: 0, height: -2 },
-                    shadowOpacity: 0.1,
-                    shadowRadius: 4,
-                    height: 60 + insets.bottom, // Add bottom inset to height
-                    paddingBottom: insets.bottom, // Add padding for home indicator
+                    shadowOffset: { width: 0, height: -4 },
+                    shadowOpacity: isDark ? 0.4 : 0.10,
+                    shadowRadius: 16,
+                    elevation: 16,
                 },
                 tabBarLabelStyle: {
                     fontSize: 10,
                     fontWeight: '600',
                     textTransform: 'none',
-                    marginBottom: 4,
+                    marginTop: -2,
+                    marginBottom: 2,
                 },
-                tabBarIcon: ({ color }) => {
-                    let iconName;
-                    if (route.name === 'Home') iconName = 'dashboard';
-                    else if (route.name === 'PayrollTab') iconName = 'account-balance-wallet';
-                    else if (route.name === 'GuardsTab') iconName = 'groups';
-                    else if (route.name === 'SitesTab') iconName = 'domain';
-                    else if (route.name === 'ReportsTab') iconName = 'assignment';
-                    // MaterialTopTabs passes 'color' but not 'size' by default in some versions,
-                    // but we can hardcode size or rely on default.
-                    return <MaterialIcons name={iconName} size={24} color={color} />;
+                tabBarItemStyle: {
+                    paddingVertical: 4,
+                },
+                tabBarIcon: ({ focused }) => {
+                    const iconName = TAB_ICONS[route.name] || 'circle';
+                    return (
+                        <MaterialIcons
+                            name={iconName}
+                            size={24}
+                            color={focused ? theme.colors.primary : theme.colors.textSecondary}
+                        />
+                    );
                 },
             })}
         >
-            <Tab.Screen
-                name="Home"
-                component={HomeNavigator}
-                options={{ title: 'Home' }}
-            />
-            <Tab.Screen
-                name="PayrollTab"
-                component={PayrollNavigator}
-                options={{ title: 'Payroll' }}
-            />
-            <Tab.Screen
-                name="GuardsTab"
-                component={GuardsNavigator}
-                options={{ title: 'Guards' }}
-            />
-            <Tab.Screen
-                name="SitesTab"
-                component={SitesNavigator}
-                options={{ title: 'Sites' }}
-            />
-            <Tab.Screen
-                name="ReportsTab"
-                component={ReportsNavigator}
-                options={{ title: 'Reports' }}
-            />
+            <Tab.Screen name="Home" component={HomeNavigator} options={{ title: TAB_LABELS.Home }} />
+            <Tab.Screen name="PayrollTab" component={PayrollNavigator} options={{ title: TAB_LABELS.PayrollTab }} />
+            <Tab.Screen name="GuardsTab" component={GuardsNavigator} options={{ title: TAB_LABELS.GuardsTab }} />
+            <Tab.Screen name="SitesTab" component={SitesNavigator} options={{ title: TAB_LABELS.SitesTab }} />
+            <Tab.Screen name="ReportsTab" component={ReportsNavigator} options={{ title: TAB_LABELS.ReportsTab }} />
         </Tab.Navigator>
     );
 }

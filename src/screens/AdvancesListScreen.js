@@ -1,12 +1,14 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback, useMemo, useState } from 'react';
-import { Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { ActivityIndicator, Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import DateTimePickerField from '../components/DateTimePickerField';
+import ScreenWrapper from '../components/ScreenWrapper';
 import SearchablePicker from '../components/SearchablePicker';
 import { useTheme } from '../context/ThemeContext';
 import { deleteAdvance, getAllAdvances } from '../services/advances';
 import { getGuards } from '../services/guards';
+import { shareAdvancesPDF } from '../services/reporting';
 import { formatDate } from '../utils/date';
 
 export default function AdvancesListScreen({ navigation }) {
@@ -15,7 +17,14 @@ export default function AdvancesListScreen({ navigation }) {
     const [guards, setGuards] = useState([]);
     const [advances, setAdvances] = useState([]);
     const [selectedGuardId, setSelectedGuardId] = useState('');
+    const [selectedMonth, setSelectedMonth] = useState(new Date());
     const [loading, setLoading] = useState(true);
+    const [sharing, setSharing] = useState(false);
+
+    // Derived Total
+    const totalAdvances = useMemo(() => {
+        return advances.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+    }, [advances]);
 
     const fetchGuards = async () => {
         try {
@@ -33,7 +42,11 @@ export default function AdvancesListScreen({ navigation }) {
     const fetchAdvances = async () => {
         setLoading(true);
         try {
-            const data = await getAllAdvances(selectedGuardId || null);
+            const year = selectedMonth.getFullYear();
+            const month = String(selectedMonth.getMonth() + 1).padStart(2, '0');
+            const monthStr = `${year}-${month}`;
+
+            const data = await getAllAdvances(selectedGuardId || null, monthStr);
             setAdvances(data);
         } catch (error) {
             console.error(error);
@@ -47,7 +60,7 @@ export default function AdvancesListScreen({ navigation }) {
         useCallback(() => {
             fetchGuards();
             fetchAdvances();
-        }, [selectedGuardId])
+        }, [selectedGuardId, selectedMonth])
     );
 
     const handleDelete = (item) => {
@@ -71,6 +84,26 @@ export default function AdvancesListScreen({ navigation }) {
                 }
             ]
         );
+    };
+
+    const handleShare = async () => {
+        if (advances.length === 0) {
+            Alert.alert('No Data', 'There are no advances to share for this month.');
+            return;
+        }
+
+        setSharing(true);
+        try {
+            const year = selectedMonth.getFullYear();
+            const month = String(selectedMonth.getMonth() + 1).padStart(2, '0');
+            const monthStr = `${year}-${month}`;
+
+            await shareAdvancesPDF(advances, totalAdvances, monthStr);
+        } catch (error) {
+            Alert.alert('Error', 'Failed to generate PDF.');
+        } finally {
+            setSharing(false);
+        }
     };
 
     const renderItem = ({ item }) => {
@@ -101,24 +134,48 @@ export default function AdvancesListScreen({ navigation }) {
     };
 
     return (
-        <SafeAreaView style={styles.container}>
+        <ScreenWrapper edges={['top', 'left', 'right']} style={styles.container}>
             <View style={styles.header}>
                 <Pressable onPress={() => navigation.goBack()} style={styles.backButton}>
                     <MaterialIcons name="arrow-back-ios" size={24} color={theme.colors.text} />
                 </Pressable>
                 <Text style={styles.headerTitle}>All Advances</Text>
-                <View style={{ width: 40 }} />
+
+                <Pressable onPress={handleShare} disabled={sharing} style={styles.shareButton}>
+                    {sharing ? (
+                        <ActivityIndicator size="small" color={theme.colors.primary} />
+                    ) : (
+                        <MaterialIcons name="ios-share" size={24} color={theme.colors.primary} />
+                    )}
+                </Pressable>
             </View>
 
             <View style={styles.filterContainer}>
                 <Text style={styles.filterLabel}>Filter by Guard:</Text>
-                <SearchablePicker
-                    items={[{ id: '', name: 'All Guards' }, ...guards]}
-                    selectedValue={selectedGuardId}
-                    onValueChange={setSelectedGuardId}
-                    placeholder="Select Guard..."
+                <View style={{ marginBottom: 12 }}>
+                    <SearchablePicker
+                        items={[{ id: '', name: 'All Guards' }, ...guards]}
+                        selectedValue={selectedGuardId}
+                        onValueChange={setSelectedGuardId}
+                        placeholder="Select Guard..."
+                        theme={theme}
+                    />
+                </View>
+
+                <Text style={styles.filterLabel}>Select Month:</Text>
+                <DateTimePickerField
+                    value={selectedMonth}
+                    onChange={setSelectedMonth}
+                    mode="date"
                     theme={theme}
                 />
+            </View>
+
+            <View style={{ paddingHorizontal: theme.spacing.m, paddingTop: theme.spacing.m }}>
+                <View style={styles.summaryCard}>
+                    <Text style={styles.summaryLabel}>Total Advances For {selectedMonth.toLocaleString('default', { month: 'long', year: 'numeric' })}</Text>
+                    <Text style={styles.summaryValue}>₹{totalAdvances.toFixed(2)}</Text>
+                </View>
             </View>
 
             <FlatList
@@ -136,7 +193,7 @@ export default function AdvancesListScreen({ navigation }) {
                     )
                 }
             />
-        </SafeAreaView>
+        </ScreenWrapper>
     );
 }
 
@@ -163,6 +220,14 @@ const getStyles = (theme) => StyleSheet.create({
         padding: theme.spacing.s,
         marginLeft: -theme.spacing.s,
     },
+    shareButton: {
+        padding: theme.spacing.s,
+        marginRight: -theme.spacing.s,
+        width: 40,
+        height: 40,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
     filterContainer: {
         padding: theme.spacing.m,
         backgroundColor: theme.colors.headerBackground,
@@ -176,6 +241,28 @@ const getStyles = (theme) => StyleSheet.create({
         color: theme.colors.textSecondary,
         marginBottom: 8,
         textTransform: 'uppercase',
+    },
+    summaryCard: {
+        backgroundColor: theme.colors.primary,
+        padding: 20,
+        borderRadius: theme.borderRadius.xl,
+        alignItems: 'center',
+        shadowColor: theme.colors.primary,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 4,
+    },
+    summaryLabel: {
+        fontSize: 14,
+        color: 'rgba(255,255,255,0.8)',
+        marginBottom: 4,
+        fontWeight: '600',
+    },
+    summaryValue: {
+        fontSize: 28,
+        color: 'white',
+        fontWeight: 'bold',
     },
     listContent: {
         padding: theme.spacing.m,
@@ -191,11 +278,7 @@ const getStyles = (theme) => StyleSheet.create({
         borderRadius: theme.borderRadius.xl,
         borderWidth: 1,
         borderColor: theme.colors.border,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 4,
-        elevation: 2,
+        ...theme.shadows.clayRaised,
     },
     cardPressed: {
         backgroundColor: theme.colors.backgroundLight,

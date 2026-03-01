@@ -11,6 +11,7 @@ import {
 import { db } from '../firebaseConfig';
 import { getScopedCollection, getScopedDoc } from './firestore';
 import { getGuards } from './guards';
+import { getSites } from './sites';
 
 export const markAttendance = async (attendanceData) => {
     const attendanceRef = getScopedCollection('attendance');
@@ -41,8 +42,7 @@ export const markBulkAttendance = async (siteId, dateStr) => {
             guardName: guard.name,
             siteId,
             date: dateStr,
-            startTime: guard.defaultStartTime || '08:00',
-            endTime: guard.defaultEndTime || '20:00',
+            shiftType: guard.shiftType || 'Day',
             createdAt: serverTimestamp(),
         });
     });
@@ -76,8 +76,7 @@ export const markGlobalAttendance = async (dateStr) => {
                 siteId: guard.defaultSiteId,
                 siteName: guard.defaultSiteName || 'Default Site',
                 date: dateStr,
-                startTime: guard.defaultStartTime || '08:00',
-                endTime: guard.defaultEndTime || '20:00',
+                shiftType: guard.shiftType || 'Day',
                 createdAt: serverTimestamp(),
                 type: 'auto_global'
             });
@@ -94,18 +93,22 @@ export const markGlobalAttendance = async (dateStr) => {
 };
 
 export const getAttendanceProgress = async (dateStr) => {
-    const guards = await getGuards();
-    const totalActive = guards.filter(g => g.active).length;
+    const sites = await getSites();
+    const totalSites = sites.length;
 
     const attendanceRef = getScopedCollection('attendance');
     const q = query(attendanceRef, where('date', '==', dateStr));
     const snapshot = await getDocs(q);
 
-    const presentGuardIds = new Set(snapshot.docs.map(d => d.data().guardId));
+    const attendedSiteIds = new Set(
+        snapshot.docs
+            .map(d => d.data().siteId)
+            .filter(Boolean)
+    );
 
     return {
-        total: totalActive,
-        present: presentGuardIds.size
+        total: totalSites,
+        present: attendedSiteIds.size
     };
 };
 
@@ -114,4 +117,29 @@ export const getAttendanceByDate = async (dateStr) => {
     const q = query(attendanceRef, where('date', '==', dateStr));
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+};
+
+export const markBulkCustomAttendance = async (records) => {
+    if (!records || records.length === 0) return 0;
+
+    const batch = writeBatch(db);
+    const attendanceRef = getScopedCollection('attendance');
+
+    records.forEach(record => {
+        const newDocRef = doc(attendanceRef);
+        batch.set(newDocRef, {
+            guardId: record.guardId,
+            guardName: record.guardName,
+            siteId: record.siteId,
+            siteName: record.siteName || 'Unknown Site',
+            date: record.date, // This will be the new target date
+            shiftType: record.shiftType || 'Day',
+            createdAt: serverTimestamp(),
+            type: record.type || 'copied_attendance',
+            copiedFrom: record.id || null // Keep track of the original record id if useful
+        });
+    });
+
+    await batch.commit();
+    return records.length;
 };

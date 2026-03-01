@@ -1,12 +1,12 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { ActivityIndicator, Alert, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import DateTimePickerField from '../components/DateTimePickerField';
+import ScreenWrapper from '../components/ScreenWrapper';
 import SearchablePicker from '../components/SearchablePicker';
 import { useTheme } from '../context/ThemeContext';
-import { getAttendanceProgress, markAttendance, markGlobalAttendance } from '../services/attendance';
+import { getAttendanceByDate, getAttendanceProgress, markAttendance, markBulkCustomAttendance, markGlobalAttendance } from '../services/attendance';
 import { getGuards } from '../services/guards';
 import { getSites } from '../services/sites';
 import { formatDate } from '../utils/date';
@@ -36,11 +36,16 @@ export default function AttendanceScreen({ navigation }) {
 
     const [hasManuallySelectedSite, setHasManuallySelectedSite] = useState(false);
 
-    const [startTime, setStartTime] = useState(new Date(new Date().setHours(8, 0, 0, 0)));
-    const [endTime, setEndTime] = useState(new Date(new Date().setHours(20, 0, 0, 0))); // Default 8pm
+    const [shiftType, setShiftType] = useState('Day');
 
     const [loading, setLoading] = useState(false);
     const [progress, setProgress] = useState({ total: 0, present: 0 });
+
+    // Copy Previous Day State
+    const [showCopyModal, setShowCopyModal] = useState(false);
+    const [previousAttendance, setPreviousAttendance] = useState([]);
+    const [selectedToCopy, setSelectedToCopy] = useState(new Set());
+    const [fetchingPrevious, setFetchingPrevious] = useState(false);
 
     const fetchData = async () => {
         try {
@@ -68,24 +73,16 @@ export default function AttendanceScreen({ navigation }) {
         }, [date]) // Refetch progress when global date changes
     );
 
-    // Auto-fill times when guard is selected
+    // Auto-fill shift when guard is selected
     useEffect(() => {
         if (selectedGuardId) {
             const guard = guards.find(g => g.id === selectedGuardId);
             if (guard) {
-                const parseTime = (timeStr) => {
-                    const d = new Date();
-                    if (!timeStr) return d;
-                    const [h, m] = timeStr.split(':');
-                    d.setHours(parseInt(h), parseInt(m), 0, 0);
-                    return d;
-                };
-
-                if (guard.defaultStartTime) setStartTime(parseTime(guard.defaultStartTime));
-                else setStartTime(new Date(new Date().setHours(8, 0, 0, 0)));
-
-                if (guard.defaultEndTime) setEndTime(parseTime(guard.defaultEndTime));
-                else setEndTime(new Date(new Date().setHours(20, 0, 0, 0)));
+                if (guard.shiftType) {
+                    setShiftType(guard.shiftType);
+                } else {
+                    setShiftType('Day');
+                }
 
                 // Only auto-fill site if user hasn't manually selected one
                 if (guard.defaultSiteId && !hasManuallySelectedSite) {
@@ -121,6 +118,61 @@ export default function AttendanceScreen({ navigation }) {
         );
     };
 
+    const handleOpenCopyModal = async () => {
+        setFetchingPrevious(true);
+        setShowCopyModal(true);
+        try {
+            // Get yesterday's date string relative to currently selected date
+            const yesterday = new Date(date);
+            yesterday.setDate(yesterday.getDate() - 1);
+            const prevDateStr = getLocalISODate(yesterday);
+
+            const records = await getAttendanceByDate(prevDateStr);
+            setPreviousAttendance(records || []);
+            // By default, select all
+            setSelectedToCopy(new Set((records || []).map(r => r.id)));
+        } catch (e) {
+            Alert.alert("Error", "Could not fetch previous day's attendance.");
+            setShowCopyModal(false);
+        } finally {
+            setFetchingPrevious(false);
+        }
+    };
+
+    const toggleCopySelection = (recordId) => {
+        const newSet = new Set(selectedToCopy);
+        if (newSet.has(recordId)) newSet.delete(recordId);
+        else newSet.add(recordId);
+        setSelectedToCopy(newSet);
+    };
+
+    const handleSaveCopiedAttendance = async () => {
+        if (selectedToCopy.size === 0) {
+            Alert.alert("Notice", "No guards selected to copy.");
+            return;
+        }
+
+        setLoading(true);
+        try {
+            // Filter the records that are selected
+            const recordsToSave = previousAttendance
+                .filter(r => selectedToCopy.has(r.id))
+                .map(r => ({
+                    ...r,
+                    date: getLocalISODate(date) // overwrite date to current selected date
+                }));
+
+            const count = await markBulkCustomAttendance(recordsToSave);
+            await fetchProgress();
+            setShowCopyModal(false);
+            Alert.alert("Success", `Copied ${count} guard(s) attendance to ${getLocalISODate(date)}.`);
+        } catch (e) {
+            Alert.alert("Error", "Could not save copied attendance.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const handleManualSave = async () => {
         if (!selectedGuardId || !selectedSiteId) {
             Alert.alert('Error', 'Please select a site and a guard.');
@@ -129,8 +181,6 @@ export default function AttendanceScreen({ navigation }) {
         setLoading(true);
         try {
             const guard = guards.find(g => g.id === selectedGuardId);
-            const formatTime = (d) => d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
-
             // Use GLOBAL DATE
             const targetDateStr = getLocalISODate(date);
 
@@ -140,8 +190,7 @@ export default function AttendanceScreen({ navigation }) {
                 siteId: selectedSiteId,
                 siteName: sites.find(s => s.id === selectedSiteId)?.name,
                 date: targetDateStr,
-                startTime: formatTime(startTime),
-                endTime: formatTime(endTime),
+                shiftType: shiftType,
             });
             await fetchProgress();
 
@@ -175,7 +224,7 @@ export default function AttendanceScreen({ navigation }) {
     };
 
     return (
-        <SafeAreaView style={styles.container}>
+        <ScreenWrapper edges={['top', 'left', 'right']} style={styles.container}>
             {/* 1. GLOBAL DATE SELECTOR */}
             <View style={styles.header}>
                 <Pressable
@@ -231,7 +280,7 @@ export default function AttendanceScreen({ navigation }) {
                     <View style={styles.progressContent}>
                         <Text style={styles.progressTitle}>Daily Progress</Text>
                         <Text style={styles.progressSubtitle}>
-                            {progress.present} of {progress.total} active guards present
+                            {progress.present} of {progress.total} sites covered
                         </Text>
                         <View style={styles.progressBarBg}>
                             <View style={[styles.progressBarFill, { width: `${progress.total === 0 ? 0 : (progress.present / progress.total) * 100}%` }]} />
@@ -253,6 +302,15 @@ export default function AttendanceScreen({ navigation }) {
                         )}
                     </Pressable>
                     <Text style={styles.helperText}>Marks all guards for selected date</Text>
+
+                    {/* Copy Previous Day Button */}
+                    <Pressable
+                        style={({ pressed }) => [styles.copyButton, pressed && styles.pressed]}
+                        onPress={handleOpenCopyModal}
+                    >
+                        <MaterialIcons name="content-copy" size={24} color={theme.colors.primary} style={{ marginRight: 8 }} />
+                        <Text style={styles.copyButtonText}>Copy Last Day's Attendance</Text>
+                    </Pressable>
                 </View>
 
                 {/* Manual Entry Section */}
@@ -281,26 +339,28 @@ export default function AttendanceScreen({ navigation }) {
                             theme={theme}
                         />
 
-                        <View style={styles.row}>
-                            <View style={styles.halfInput}>
-                                <DateTimePickerField
-                                    label="Start Time"
-                                    value={startTime}
-                                    onChange={setStartTime}
-                                    mode="time"
-                                    theme={theme}
-                                />
-                            </View>
-                            <View style={styles.halfInput}>
-                                <DateTimePickerField
-                                    label="End Time"
-                                    value={endTime}
-                                    onChange={setEndTime}
-                                    mode="time"
-                                    theme={theme}
-                                />
-                            </View>
+                        <View style={{ height: 16 }} />
+
+                        {/* Shift Type Selector */}
+                        <View style={styles.segmentedControl}>
+                            <Pressable
+                                style={[styles.segmentButton, shiftType === 'Day' && styles.segmentButtonActive]}
+                                onPress={() => setShiftType('Day')}
+                            >
+                                <MaterialIcons name="wb-sunny" size={20} color={shiftType === 'Day' ? theme.colors.primary : theme.colors.textSecondary} style={{ marginRight: 8 }} />
+                                <Text style={[styles.segmentText, shiftType === 'Day' && styles.segmentTextActive]}>Day Shift</Text>
+                            </Pressable>
+
+                            <Pressable
+                                style={[styles.segmentButton, shiftType === 'Night' && styles.segmentButtonActive]}
+                                onPress={() => setShiftType('Night')}
+                            >
+                                <MaterialIcons name="nights-stay" size={20} color={shiftType === 'Night' ? '#3b82f6' : theme.colors.textSecondary} style={{ marginRight: 8 }} />
+                                <Text style={[styles.segmentText, shiftType === 'Night' && { color: '#3b82f6' }]}>Night Shift</Text>
+                            </Pressable>
                         </View>
+
+                        <View style={{ height: 16 }} />
 
                         <Pressable
                             style={({ pressed }) => [styles.saveButton, pressed && styles.pressed]}
@@ -326,7 +386,102 @@ export default function AttendanceScreen({ navigation }) {
                 </View>
 
             </ScrollView>
-        </SafeAreaView>
+
+            {/* Copy Previous Day Modal */}
+            <Modal
+                visible={showCopyModal}
+                animationType="slide"
+                transparent={true}
+                onRequestClose={() => setShowCopyModal(false)}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContent}>
+                        <View style={styles.modalHeader}>
+                            <Text style={styles.modalTitle}>Preview Previous Day</Text>
+                            <Pressable onPress={() => setShowCopyModal(false)}>
+                                <MaterialIcons name="close" size={24} color={theme.colors.text} />
+                            </Pressable>
+                        </View>
+
+                        {fetchingPrevious ? (
+                            <View style={styles.modalLoading}>
+                                <ActivityIndicator size="large" color={theme.colors.primary} />
+                                <Text style={{ color: theme.colors.textSecondary, marginTop: 8 }}>Fetching records...</Text>
+                            </View>
+                        ) : previousAttendance.length === 0 ? (
+                            <View style={styles.modalEmpty}>
+                                <MaterialIcons name="event-busy" size={48} color={theme.colors.textSecondary} style={{ marginBottom: 16 }} />
+                                <Text style={styles.modalEmptyText}>No attendance records found for yesterday.</Text>
+                            </View>
+                        ) : (
+                            <>
+                                <View style={styles.modalControls}>
+                                    <Pressable
+                                        style={styles.selectAllToggle}
+                                        onPress={() => {
+                                            if (selectedToCopy.size === previousAttendance.length) {
+                                                setSelectedToCopy(new Set()); // Deselect all
+                                            } else {
+                                                setSelectedToCopy(new Set(previousAttendance.map(r => r.id))); // Select all
+                                            }
+                                        }}
+                                    >
+                                        <MaterialIcons
+                                            name={selectedToCopy.size === previousAttendance.length ? "check-box" : "check-box-outline-blank"}
+                                            size={24}
+                                            color={theme.colors.primary}
+                                        />
+                                        <Text style={styles.selectAllText}>
+                                            {selectedToCopy.size === previousAttendance.length ? "Deselect All" : "Select All"} ({selectedToCopy.size}/{previousAttendance.length})
+                                        </Text>
+                                    </Pressable>
+                                </View>
+
+                                <ScrollView style={styles.modalList} showsVerticalScrollIndicator={false}>
+                                    {previousAttendance.map(record => {
+                                        const isSelected = selectedToCopy.has(record.id);
+                                        return (
+                                            <Pressable
+                                                key={record.id}
+                                                style={[styles.modalListItem, isSelected && styles.modalListItemSelected]}
+                                                onPress={() => toggleCopySelection(record.id)}
+                                            >
+                                                <MaterialIcons
+                                                    name={isSelected ? "check-box" : "check-box-outline-blank"}
+                                                    size={24}
+                                                    color={isSelected ? theme.colors.primary : theme.colors.textSecondary}
+                                                />
+                                                <View style={styles.modalListItemTextContainer}>
+                                                    <Text style={styles.modalListItemName}>{record.guardName}</Text>
+                                                    <Text style={styles.modalListItemSite}>@ {record.siteName || 'Unknown Site'}</Text>
+                                                </View>
+                                                <Text style={styles.modalListItemTime}>
+                                                    {record.shiftType === 'Night' ? 'Night Shift' : 'Day Shift'}
+                                                </Text>
+                                            </Pressable>
+                                        );
+                                    })}
+                                </ScrollView>
+
+                                <View style={styles.modalFooter}>
+                                    <Pressable
+                                        style={[styles.modalSaveButton, selectedToCopy.size === 0 && styles.modalSaveButtonDisabled]}
+                                        onPress={handleSaveCopiedAttendance}
+                                        disabled={selectedToCopy.size === 0 || loading}
+                                    >
+                                        {loading ? (
+                                            <ActivityIndicator color="white" />
+                                        ) : (
+                                            <Text style={styles.modalSaveButtonText}>Mark {selectedToCopy.size} Present</Text>
+                                        )}
+                                    </Pressable>
+                                </View>
+                            </>
+                        )}
+                    </View>
+                </View>
+            </Modal>
+        </ScreenWrapper>
     );
 }
 
@@ -420,11 +575,7 @@ const getStyles = (theme) => StyleSheet.create({
         borderColor: theme.colors.border,
         padding: theme.spacing.m,
         gap: theme.spacing.m,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 4,
-        elevation: 2,
+        ...theme.shadows.clayRaised,
     },
     progressIcon: {
         width: 48,
@@ -500,11 +651,7 @@ const getStyles = (theme) => StyleSheet.create({
         padding: theme.spacing.m,
         borderWidth: 1,
         borderColor: theme.colors.border,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 4,
-        elevation: 2,
+        ...theme.shadows.clayRaised,
     },
     row: {
         flexDirection: 'row',
@@ -551,5 +698,168 @@ const getStyles = (theme) => StyleSheet.create({
         fontSize: 16,
         color: theme.colors.primary,
         fontWeight: '600',
+    },
+    copyButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: 48,
+        borderRadius: theme.borderRadius.l,
+        borderWidth: 1,
+        borderColor: theme.colors.primary,
+        backgroundColor: `${theme.colors.primary}1A`,
+        marginTop: 8,
+    },
+    copyButtonText: {
+        color: theme.colors.primary,
+        fontWeight: 'bold',
+        fontSize: 16,
+    },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        justifyContent: 'flex-end',
+    },
+    modalContent: {
+        backgroundColor: theme.colors.backgroundLight,
+        borderTopLeftRadius: theme.borderRadius.xl,
+        borderTopRightRadius: theme.borderRadius.xl,
+        height: '80%',
+        padding: theme.spacing.m,
+    },
+    modalHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 16,
+        paddingBottom: 16,
+        borderBottomWidth: 1,
+        borderBottomColor: theme.colors.border,
+    },
+    modalTitle: {
+        fontSize: 20,
+        fontWeight: 'bold',
+        color: theme.colors.text,
+    },
+    modalLoading: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    modalEmpty: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    modalEmptyText: {
+        color: theme.colors.textSecondary,
+        fontSize: 16,
+        fontWeight: '600',
+    },
+    modalControls: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 12,
+    },
+    selectAllToggle: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 8,
+    },
+    selectAllText: {
+        marginLeft: 8,
+        color: theme.colors.text,
+        fontWeight: '600',
+        fontSize: 14,
+    },
+    modalList: {
+        flex: 1,
+    },
+    modalListItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: theme.spacing.m,
+        borderRadius: theme.borderRadius.l,
+        backgroundColor: theme.colors.cardBackground,
+        marginBottom: 8,
+        borderWidth: 1,
+        borderColor: theme.colors.border,
+        ...theme.shadows.clayRaised,
+    },
+    modalListItemSelected: {
+        borderColor: theme.colors.primary,
+        backgroundColor: `${theme.colors.primary}0D`,
+    },
+    modalListItemTextContainer: {
+        flex: 1,
+        marginLeft: 12,
+    },
+    modalListItemName: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        color: theme.colors.text,
+    },
+    modalListItemSite: {
+        fontSize: 12,
+        color: theme.colors.textSecondary,
+        marginTop: 2,
+    },
+    modalListItemTime: {
+        fontSize: 12,
+        fontWeight: 'bold',
+        color: theme.colors.textSecondary,
+    },
+    modalFooter: {
+        paddingTop: 16,
+        borderTopWidth: 1,
+        borderTopColor: theme.colors.border,
+        marginTop: 8,
+    },
+    modalSaveButton: {
+        backgroundColor: theme.colors.primary,
+        height: 56,
+        borderRadius: theme.borderRadius.l,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    modalSaveButtonDisabled: {
+        backgroundColor: theme.colors.border,
+    },
+    modalSaveButtonText: {
+        color: 'white',
+        fontSize: 16,
+        fontWeight: 'bold',
+    },
+    segmentedControl: {
+        flexDirection: 'row',
+        backgroundColor: theme.colors.backgroundLight,
+        borderRadius: theme.borderRadius.l,
+        padding: 4,
+        height: 48,
+        borderWidth: 1,
+        borderColor: theme.colors.border,
+    },
+    segmentButton: {
+        flex: 1,
+        flexDirection: 'row',
+        borderRadius: theme.borderRadius.m,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    segmentButtonActive: {
+        backgroundColor: theme.colors.cardBackground,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 2,
+    },
+    segmentText: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: theme.colors.textSecondary,
+    },
+    segmentTextActive: {
+        color: theme.colors.primary,
     },
 });

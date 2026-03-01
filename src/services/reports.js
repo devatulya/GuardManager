@@ -30,6 +30,7 @@ export const generateSiteWiseReport = async (siteId, startDate, endDate) => {
             return {
                 date: data.date,
                 guardName: data.guardName || 'Unknown', // Join logic: data already has guardName
+                shiftType: data.shiftType || '', // Fallback for newer records
                 startTime: data.startTime || '-',
                 endTime: data.endTime || '-'
             };
@@ -84,8 +85,9 @@ export const generateGuardWiseReport = async (guardId, month) => {
             return {
                 date: data.date,
                 siteName: data.siteName || 'Unknown',
-                startTime: data.startTime,
-                endTime: data.endTime
+                shiftType: data.shiftType || '',
+                startTime: data.startTime || '-',
+                endTime: data.endTime || '-'
             };
         });
 
@@ -144,6 +146,7 @@ export const generateDailyReport = async (date) => {
                 date: d.date,
                 siteName: d.siteName || 'Unknown Site',
                 guardName: d.guardName || 'Unknown Guard',
+                shiftType: d.shiftType || '',
                 startTime: d.startTime || '-',
                 endTime: d.endTime || '-'
             };

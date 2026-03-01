@@ -2,8 +2,8 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useIsFocused } from '@react-navigation/native';
 import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import DateTimePickerField from '../components/DateTimePickerField';
+import ScreenWrapper from '../components/ScreenWrapper';
 import SearchablePicker from '../components/SearchablePicker';
 import { useTheme } from '../context/ThemeContext';
 import { getGuards } from '../services/guards';
@@ -110,7 +110,7 @@ export default function ReportsScreen({ navigation }) {
     };
 
     return (
-        <SafeAreaView style={styles.container}>
+        <ScreenWrapper edges={['top', 'left', 'right']} style={styles.container}>
             <View style={styles.header}>
                 <Pressable style={styles.backButton} onPress={() => navigation.goBack()}>
                     <MaterialIcons name="arrow-back-ios" size={24} color={theme.colors.slate900} />
@@ -229,7 +229,7 @@ export default function ReportsScreen({ navigation }) {
                     )}
                 </Pressable>
             </View>
-        </SafeAreaView>
+        </ScreenWrapper>
     );
 }
 
@@ -275,10 +275,7 @@ const getStyles = (theme) => StyleSheet.create({
     },
     tabActive: {
         backgroundColor: theme.colors.cardBackground,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.1,
-        shadowRadius: 2,
+        ...theme.shadows.clayRaised,
     },
     tabText: {
         fontSize: 14,
@@ -314,6 +311,7 @@ const getStyles = (theme) => StyleSheet.create({
         borderColor: theme.colors.border,
         padding: theme.spacing.m,
         marginTop: 8,
+        ...theme.shadows.clayRaised,
     },
     quickRange: {
         flexDirection: 'row',

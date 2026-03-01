@@ -15,13 +15,16 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 
 // Initialize Firebase services
-// Default getAuth() uses in-memory persistence in React Native if not configured
-// We replace it with initializeAuth + AsyncStorage
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { getReactNativePersistence, initializeAuth } from 'firebase/auth';
+import { browserLocalPersistence, getReactNativePersistence, initializeAuth } from 'firebase/auth';
+import { Platform } from 'react-native';
+
+const persistence = Platform.OS === 'web'
+    ? browserLocalPersistence
+    : getReactNativePersistence(AsyncStorage);
 
 export const auth = initializeAuth(app, {
-    persistence: getReactNativePersistence(AsyncStorage)
+    persistence
 });
 
 export const db = getFirestore(app);

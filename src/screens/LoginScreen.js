@@ -1,339 +1,360 @@
+/**
+ * LoginScreen — Email and Password authentication
+ * Pixel-faithful match to reference design (clay skeuomorphic aesthetic).
+ */
 import { MaterialIcons } from '@expo/vector-icons';
-import { getApp } from 'firebase/app';
-import { useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import FirebaseRecaptchaVerifierModal from '../components/FirebaseRecaptcha';
+import { useState } from 'react';
+import {
+    ActivityIndicator,
+    Image,
+    KeyboardAvoidingView,
+    Platform,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    View,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import ScreenWrapper from '../components/ScreenWrapper';
 import { useAuth } from '../context/AuthContext';
-import { theme } from '../theme';
+
+const PRIMARY = '#4F34E6';
+const BG = '#f6f6f8';
+const DARK_TEXT = '#0a0a1f';
 
 export default function LoginScreen({ navigation }) {
-    const [phoneNumber, setPhoneNumber] = useState('+91');
-    const [verificationId, setVerificationId] = useState(null);
-    const [verificationCode, setVerificationCode] = useState('');
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
-    const { sendOTP, confirmOTP } = useAuth();
+    const { login, googleLogin } = useAuth();
+    const insets = useSafeAreaInsets();
 
-    const recaptchaVerifier = useRef(null);
-    const app = getApp();
-
-    const handleSendOTP = async () => {
-        if (!phoneNumber || phoneNumber.length < 10) {
-            Alert.alert('Error', 'Please enter a valid phone number');
+    const handleLogin = async () => {
+        if (!email || !password) {
+            alert('Please fill in both fields.');
             return;
         }
-        // Ensure + prefix
-        const formattedNumber = phoneNumber.startsWith('+') ? phoneNumber : `+${phoneNumber}`;
         setLoading(true);
         try {
-            const vid = await sendOTP(formattedNumber, recaptchaVerifier.current);
-            setVerificationId(vid);
-            Alert.alert('OTP Sent', 'Please enter the code received via SMS.');
+            await login(email, password);
         } catch (error) {
-            Alert.alert('Error', error.message);
+            alert(error.message);
         } finally {
             setLoading(false);
         }
     };
 
-    const handleVerifyOTP = async () => {
-        if (!verificationCode) {
-            Alert.alert('Error', 'Please enter the verification code');
-            return;
-        }
+    const handleGoogleLogin = async () => {
         setLoading(true);
         try {
-            await confirmOTP(verificationId, verificationCode);
-            // Navigation handled by AuthContext persistence + MainNavigator
+            await googleLogin();
         } catch (error) {
-            Alert.alert('Error', 'Invalid OTP Code');
+            alert(error.message);
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <SafeAreaView style={styles.safeArea}>
-            <FirebaseRecaptchaVerifierModal
-                ref={recaptchaVerifier}
-                firebaseConfig={app.options}
-            />
+        <ScreenWrapper bg={BG}>
+            <KeyboardAvoidingView
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                style={styles.root}
+            >
+                <ScrollView
+                    contentContainerStyle={styles.scroll}
+                    showsVerticalScrollIndicator={false}
+                    keyboardShouldPersistTaps="handled"
+                >
+                    {/* ── Header: Shield Logo ── */}
+                    <View style={styles.header}>
+                        <View style={styles.logoOuter}>
+                            <View style={styles.logoInner}>
+                                <MaterialIcons name="security" size={40} color="white" />
+                            </View>
+                        </View>
+                        <Text style={styles.title}>Welcome Back</Text>
+                        <View style={styles.pill}>
+                            <Text style={styles.pillText}>Supervisor Login</Text>
+                        </View>
+                    </View>
 
-            <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.container}>
-                <ScrollView contentContainerStyle={styles.scrollContent}>
-
-                    {/* Header / Logo Area */}
-                    <View style={styles.logoSection}>
-                        <View style={styles.logoContainer}>
-                            <View style={styles.bgBox1} />
-                            <View style={styles.bgBox2} />
-                            <View style={styles.logoBox}>
-                                <Image
-                                    source={require('../../assets/logo.png')}
-                                    style={styles.logoImage}
-                                    resizeMode="contain"
+                    {/* ── Form ── */}
+                    <View style={styles.form}>
+                        {/* Email */}
+                        <View style={styles.fieldGroup}>
+                            <Text style={styles.label}>WORK EMAIL</Text>
+                            <View style={styles.inputRow}>
+                                <MaterialIcons name="email" size={20} color="#94a3b8" style={styles.inputIcon} />
+                                <TextInput
+                                    style={styles.textInput}
+                                    placeholder="Enter work email"
+                                    placeholderTextColor="#94a3b8"
+                                    keyboardType="email-address"
+                                    autoCapitalize="none"
+                                    value={email}
+                                    onChangeText={setEmail}
                                 />
                             </View>
                         </View>
-                        <View style={styles.textCenter}>
-                            <Text style={styles.heading}>Guard Manager</Text>
-                            <Text style={styles.subHeading}>SUPERVISOR PORTAL</Text>
-                        </View>
-                    </View>
 
-                    {/* Card Container */}
-                    <View style={styles.card}>
-                        <Text style={styles.cardTitle}>
-                            {!verificationId ? 'Welcome Back' : 'Verify Identity'}
-                        </Text>
-                        <Text style={styles.cardSubtitle}>
-                            {!verificationId
-                                ? 'Enter your mobile number to sign in or create an account.'
-                                : `Enter the 6-digit code sent to ${phoneNumber}`
+                        {/* Password */}
+                        <View style={styles.fieldGroup}>
+                            <Text style={styles.label}>PASSWORD</Text>
+                            <View style={styles.inputRow}>
+                                <MaterialIcons name="lock" size={20} color="#94a3b8" style={styles.inputIcon} />
+                                <TextInput
+                                    style={styles.textInput}
+                                    placeholder="Enter password"
+                                    placeholderTextColor="#94a3b8"
+                                    secureTextEntry
+                                    value={password}
+                                    onChangeText={setPassword}
+                                />
+                            </View>
+                        </View>
+
+                        {/* Forgot Password Link */}
+                        <View style={styles.forgotPasswordContainer}>
+                            <Pressable onPress={() => navigation.navigate('ForgotPassword')}>
+                                <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+                            </Pressable>
+                        </View>
+
+                        {/* Primary Login button */}
+                        <Pressable
+                            style={({ pressed }) => [styles.primaryBtn, pressed && styles.btnPressed]}
+                            onPress={handleLogin}
+                            disabled={loading}
+                        >
+                            {loading
+                                ? <ActivityIndicator color="white" />
+                                : <Text style={styles.primaryBtnText}>Login  →</Text>
                             }
-                        </Text>
+                        </Pressable>
 
-                        {/* Form */}
-                        <View style={styles.form}>
-                            {!verificationId ? (
-                                <>
-                                    <View style={styles.inputGroup}>
-                                        <Text style={styles.label}>Mobile Number</Text>
-                                        <TextInput
-                                            style={styles.input}
-                                            placeholder="+91 99999 99999"
-                                            value={phoneNumber}
-                                            onChangeText={setPhoneNumber}
-                                            keyboardType="phone-pad"
-                                            autoComplete="tel"
-                                            placeholderTextColor="#9ca3af"
-                                        />
-                                    </View>
-                                    <Pressable
-                                        style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
-                                        onPress={handleSendOTP}
-                                        disabled={loading}
-                                    >
-                                        {loading ? <ActivityIndicator color="white" /> : <Text style={styles.buttonText}>Get Login Code</Text>}
-                                    </Pressable>
-                                </>
-                            ) : (
-                                <>
-                                    <View style={styles.inputGroup}>
-                                        <Text style={styles.label}>Verification Code</Text>
-                                        <TextInput
-                                            style={styles.input}
-                                            placeholder="123456"
-                                            value={verificationCode}
-                                            onChangeText={setVerificationCode}
-                                            keyboardType="number-pad"
-                                            placeholderTextColor="#9ca3af"
-                                        />
-                                    </View>
-                                    <Pressable
-                                        style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
-                                        onPress={handleVerifyOTP}
-                                        disabled={loading}
-                                    >
-                                        {loading ? <ActivityIndicator color="white" /> : <Text style={styles.buttonText}>Verify & Sign In</Text>}
-                                    </Pressable>
-                                    <Pressable onPress={() => setVerificationId(null)} style={styles.linkButton}>
-                                        <Text style={styles.linkText}>Change Phone Number</Text>
-                                    </Pressable>
-                                </>
-                            )}
+                        {/* OR Separator */}
+                        <View style={styles.dividerRow}>
+                            <View style={styles.dividerLine} />
+                            <Text style={styles.dividerText}>OR</Text>
+                            <View style={styles.dividerLine} />
                         </View>
+
+                        {/* Google button */}
+                        <Pressable
+                            style={({ pressed }) => [styles.googleBtn, pressed && styles.btnPressed]}
+                            onPress={handleGoogleLogin}
+                            disabled={loading}
+                        >
+                            <Image
+                                source={{ uri: 'https://cdn-icons-png.flaticon.com/512/300/300221.png' }}
+                                style={styles.googleIcon}
+                            />
+                            <Text style={styles.googleBtnText}>Login with Google</Text>
+                        </Pressable>
                     </View>
 
-                    {/* Footer / Powered By */}
+                    {/* ── Footer ── */}
                     <View style={styles.footer}>
-                        <View style={styles.secureBadge}>
-                            <MaterialIcons name="verified-user" size={14} color={theme.colors.success} />
-                            <Text style={styles.secureText}>Secure & Reliable</Text>
-                        </View>
-                        <Text style={styles.poweredLabel}>POWERED BY SENTINEL SECURITY SYSTEMS</Text>
+                        <Pressable
+                            style={({ pressed }) => [styles.secondaryBtn, pressed && styles.btnPressed]}
+                            onPress={() => navigation.goBack()}
+                        >
+                            <Text style={styles.secondaryBtnText}>
+                                New to GuardManager?{' '}
+                                <Text style={styles.signupLink}>Sign Up</Text>
+                            </Text>
+                        </Pressable>
+                        <View style={styles.homeIndicator} />
                     </View>
-
                 </ScrollView>
             </KeyboardAvoidingView>
-        </SafeAreaView>
+        </ScreenWrapper>
     );
 }
 
 const styles = StyleSheet.create({
-    safeArea: {
+    root: {
         flex: 1,
-        backgroundColor: '#f6f6f8', // Matching ProfileSetup
+        backgroundColor: BG,
     },
-    container: {
-        flex: 1,
-    },
-    scrollContent: {
+    scroll: {
         flexGrow: 1,
-        justifyContent: 'center',
-        padding: 24,
+        paddingHorizontal: 32,
+        paddingTop: 16,
+        paddingBottom: 32,
     },
-    logoSection: {
+
+    // Header
+    header: {
         alignItems: 'center',
         marginBottom: 32,
-    },
-    logoContainer: {
-        position: 'relative',
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginBottom: 24,
-        width: 100,
-        height: 100,
-    },
-    bgBox1: {
-        position: 'absolute',
-        width: 88,
-        height: 88,
-        backgroundColor: `${theme.colors.primary}10`,
-        borderRadius: 24,
-        transform: [{ rotate: '12deg' }],
-    },
-    bgBox2: {
-        position: 'absolute',
-        width: 88,
-        height: 88,
-        backgroundColor: `${theme.colors.success}10`,
-        borderRadius: 24,
-        transform: [{ rotate: '-6deg' }],
-    },
-    logoBox: {
-        width: 80,
-        height: 80,
-        backgroundColor: 'white',
-        borderRadius: 20,
-        alignItems: 'center',
-        justifyContent: 'center',
-        shadowColor: '#000',
-        elevation: 2,
-    },
-    logoImage: {
-        width: '70%',
-        height: '70%',
-        resizeMode: 'contain',
-    },
-    textCenter: {
-        alignItems: 'center',
-    },
-    heading: {
-        fontSize: 28,
-        fontWeight: '800',
-        color: '#111118',
-        marginBottom: 8,
-    },
-    subHeading: {
-        color: theme.colors.primary,
-        fontSize: 12,
-        fontWeight: 'bold',
-        letterSpacing: 2,
-    },
-    card: {
-        backgroundColor: 'white',
-        borderRadius: 16,
-        padding: 24,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 2,
-        borderWidth: 1,
-        borderColor: '#dbdbe6',
-    },
-    cardTitle: {
-        fontSize: 20,
-        fontWeight: 'bold',
-        color: '#111118',
-        marginBottom: 8,
-        textAlign: 'center',
-    },
-    cardSubtitle: {
-        fontSize: 14,
-        color: '#616189',
-        textAlign: 'center',
-        marginBottom: 24,
-        lineHeight: 20,
-    },
-    form: {
-        gap: 16,
-    },
-    inputGroup: {
-        gap: 8,
-    },
-    label: {
-        fontSize: 12,
-        fontWeight: '600',
-        color: '#4b5563',
-        marginLeft: 4,
-    },
-    input: {
-        height: 52,
-        backgroundColor: '#f9fafb',
-        borderWidth: 1,
-        borderColor: '#dbdbe6',
-        borderRadius: 12,
-        paddingHorizontal: 16,
-        fontSize: 16,
-        color: '#111118',
-    },
-    button: {
-        backgroundColor: theme.colors.primary,
-        borderRadius: 12,
-        height: 52,
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginTop: 8,
-        shadowColor: theme.colors.primary,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.2,
-        shadowRadius: 8,
-        elevation: 4,
-    },
-    buttonPressed: {
-        opacity: 0.9,
-        transform: [{ scale: 0.98 }],
-    },
-    buttonText: {
-        color: 'white',
-        fontSize: 16,
-        fontWeight: 'bold',
-    },
-    linkButton: {
-        alignItems: 'center',
-        padding: 12,
-    },
-    linkText: {
-        color: theme.colors.primary,
-        fontSize: 14,
-        fontWeight: '600',
-    },
-    footer: {
-        marginTop: 32,
-        alignItems: 'center',
         gap: 12,
     },
-    secureBadge: {
+    logoOuter: {
+        width: 96, height: 96, borderRadius: 48,
+        backgroundColor: 'white',
+        alignItems: 'center', justifyContent: 'center',
+        marginBottom: 8,
+        shadowColor: '#000',
+        shadowOffset: { width: 8, height: 8 },
+        shadowOpacity: 0.08,
+        shadowRadius: 16,
+        elevation: 10,
+    },
+    logoInner: {
+        width: 64, height: 64, borderRadius: 32,
+        backgroundColor: PRIMARY,
+        alignItems: 'center', justifyContent: 'center',
+        shadowColor: PRIMARY,
+        shadowOffset: { width: 12, height: 12 },
+        shadowOpacity: 0.25,
+        shadowRadius: 24,
+        elevation: 12,
+    },
+    title: {
+        fontFamily: 'Arial',
+        fontSize: 30,
+        fontWeight: '800',
+        color: DARK_TEXT,
+        letterSpacing: -0.5,
+    },
+    pill: {
+        backgroundColor: 'white',
+        paddingHorizontal: 16, paddingVertical: 6,
+        borderRadius: 999,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 6,
+        elevation: 2,
+    },
+    pillText: {
+        color: PRIMARY,
+        fontFamily: 'Arial',
+        fontSize: 10,
+        fontWeight: '800',
+        textTransform: 'uppercase',
+        letterSpacing: 2,
+    },
+
+    // Form
+    form: { gap: 20 },
+    fieldGroup: { gap: 8 },
+    label: {
+        fontFamily: 'Arial',
+        fontSize: 12,
+        fontWeight: '700',
+        color: '#64748b',
+        textTransform: 'uppercase',
+        letterSpacing: 1.2,
+        paddingLeft: 4,
+    },
+    inputRow: {
+        height: 56,
+        borderRadius: 16,
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 6,
-        backgroundColor: '#dcfce7',
-        paddingVertical: 6,
-        paddingHorizontal: 12,
-        borderRadius: 20,
+        paddingHorizontal: 20,
+        backgroundColor: '#f1f5f9',
+        borderTopWidth: 2, borderTopColor: '#e2e8f0',
+        borderBottomWidth: 0,
+        borderLeftWidth: 1, borderLeftColor: '#e2e8f0',
+        borderRightWidth: 1, borderRightColor: '#ffffff',
     },
-    secureText: {
-        color: theme.colors.success,
-        fontSize: 10,
-        fontWeight: 'bold',
-        letterSpacing: 0.5,
+    inputIcon: { marginRight: 12 },
+    textInput: {
+        flex: 1,
+        fontFamily: 'Arial',
+        fontSize: 15,
+        color: '#1e293b',
+        fontWeight: '700',
     },
-    poweredLabel: {
-        color: '#9ca3af',
-        fontSize: 10,
-        fontWeight: 'bold',
-        letterSpacing: 1.5,
+    forgotPasswordContainer: {
+        alignItems: 'flex-end',
+        marginTop: -8,
+        paddingRight: 4,
+    },
+    forgotPasswordText: {
+        color: PRIMARY,
+        fontFamily: 'Arial',
+        fontWeight: '700',
+        fontSize: 13,
+    },
+
+    // Buttons
+    primaryBtn: {
+        height: 64,
+        backgroundColor: PRIMARY,
+        borderRadius: 16,
+        alignItems: 'center', justifyContent: 'center',
+        marginTop: 4,
+        shadowColor: PRIMARY,
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.35,
+        shadowRadius: 16,
+        elevation: 10,
+        borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.3)',
+        borderBottomWidth: 3, borderBottomColor: 'rgba(0,0,0,0.2)',
+    },
+    primaryBtnText: {
+        color: 'white', fontSize: 17, fontWeight: '800',
+        textShadowColor: 'rgba(0,0,0,0.15)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 1,
+    },
+    btnPressed: {
+        opacity: 0.95,
+        transform: [{ scale: 0.98 }, { translateY: 2 }],
+        borderBottomWidth: 0,
+        marginTop: 7,
+    },
+
+    dividerRow: { flexDirection: 'row', alignItems: 'center', gap: 16 },
+    dividerLine: { flex: 1, height: 1, backgroundColor: '#e2e8f0' },
+    dividerText: {
+        fontFamily: 'Arial',
+        fontSize: 11, fontWeight: '800', color: '#94a3b8',
+        textTransform: 'uppercase', letterSpacing: 2,
+    },
+
+    googleBtn: {
+        height: 56,
+        backgroundColor: 'white',
+        borderRadius: 16,
+        flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+        gap: 12,
+        borderWidth: 1, borderColor: '#e2e8f0',
+        borderBottomWidth: 3, borderBottomColor: '#cbd5e1',
+        shadowColor: '#64748b',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 8,
+        elevation: 3,
+    },
+    googleIcon: { width: 24, height: 24 },
+    googleBtnText: { fontFamily: 'Arial', fontSize: 15, fontWeight: '700', color: DARK_TEXT },
+
+    // Footer
+    footer: { marginTop: 24, alignItems: 'center', gap: 16 },
+    secondaryBtn: {
+        width: '100%',
+        height: 56,
+        backgroundColor: '#eef1f6',
+        borderRadius: 16,
+        alignItems: 'center', justifyContent: 'center',
+        borderWidth: 1, borderColor: 'rgba(255,255,255,0.5)',
+        shadowColor: '#a0aec0',
+        shadowOffset: { width: 6, height: 6 },
+        shadowOpacity: 0.20,
+        shadowRadius: 12,
+        elevation: 3,
+    },
+    secondaryBtnText: { fontFamily: 'Arial', fontSize: 14, fontWeight: '700', color: '#475569' },
+    signupLink: { color: PRIMARY, textDecorationLine: 'underline' },
+    homeIndicator: {
+        width: 128, height: 6,
+        borderRadius: 3, backgroundColor: '#cbd5e1',
+        opacity: 0.5, marginTop: 4,
     },
 });

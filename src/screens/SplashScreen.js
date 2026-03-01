@@ -1,198 +1,170 @@
 import { MaterialIcons } from '@expo/vector-icons';
-import { useEffect } from 'react';
-import { Dimensions, Image, StyleSheet, Text, View } from 'react-native';
-import { theme } from '../theme';
+import { useEffect, useRef } from 'react';
+import { Animated, Dimensions, Image, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import ScreenWrapper from '../components/ScreenWrapper';
+import { getTheme } from '../theme';
 
-const { width, height } = Dimensions.get('window');
+const { width } = Dimensions.get('window');
+const theme = getTheme('light');
 
 const SplashScreen = ({ navigation }) => {
+    const fadeAnim = useRef(new Animated.Value(0)).current;
+    const scaleAnim = useRef(new Animated.Value(0.85)).current;
+    const insets = useSafeAreaInsets();
+
     useEffect(() => {
-        // Auto navigate to Auth flow after 2 seconds
-        const timer = setTimeout(() => {
-            navigation.replace('Welcome');
-        }, 2000);
+        Animated.parallel([
+            Animated.timing(fadeAnim, { toValue: 1, duration: 700, useNativeDriver: true }),
+            Animated.spring(scaleAnim, { toValue: 1, friction: 6, useNativeDriver: true }),
+        ]).start();
+
+        const timer = setTimeout(() => navigation.replace('Welcome'), 2500);
         return () => clearTimeout(timer);
     }, []);
 
     return (
-        <View style={styles.container}>
-            <View style={styles.topSpacer} />
+        <ScreenWrapper bg={theme.colors.background}>
+            <View style={styles.container}>
+                {/* Background glow blobs */}
+                <View style={styles.blobTop} />
+                <View style={styles.blobBottom} />
 
-            <View style={styles.centerContent}>
-                <View style={styles.logoContainer}>
-                    <View style={styles.bgBox1} />
-                    <View style={styles.bgBox2} />
-                    <View style={styles.logoBox}>
+                <Animated.View style={[styles.center, { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }]}>
+                    {/* Logo clay card */}
+                    <View style={styles.logoCard}>
+                        <View style={styles.logoGlow} />
                         <Image
                             source={require('../../assets/logo.png')}
                             style={styles.logoImage}
                             resizeMode="contain"
                         />
                     </View>
-                </View>
 
-                <View style={styles.textContainer}>
-                    <Text style={styles.paramsText}>
-                        Guard <Text style={styles.highlight}>Manager</Text>
+                    <Text style={styles.appName}>
+                        Guard<Text style={styles.appNameAccent}>Manager</Text>
                     </Text>
+                    <Text style={styles.tagline}>SUPERVISOR PORTAL</Text>
+                </Animated.View>
 
-                    <View style={styles.dividerContainer}>
-                        <View style={styles.divider} />
-                        <Text style={styles.subText}>SUPERVISOR PORTAL</Text>
-                        <View style={styles.divider} />
+                <View style={styles.footer}>
+                    <View style={styles.secureBadge}>
+                        <MaterialIcons name="verified-user" size={13} color={theme.colors.primary} />
+                        <Text style={styles.secureText}>Secure & Reliable</Text>
                     </View>
+                    <Text style={styles.credit}>Developed by Atulya Sahu</Text>
                 </View>
             </View>
-
-            <View style={styles.footer}>
-                <View style={styles.secureBadge}>
-                    <MaterialIcons name="verified-user" size={14} color={theme.colors.secondary} />
-                    <Text style={styles.secureText}>Secure & Reliable</Text>
-                </View>
-                <View style={styles.poweredBy}>
-                    <Text style={styles.poweredLabel}>DEVELOPED BY</Text>
-                    <Text style={styles.poweredCompany}>Atulya Sahu</Text>
-                </View>
-                <View style={styles.bottomBar} />
-            </View>
-        </View>
+        </ScreenWrapper>
     );
 };
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#ffffff',
+        backgroundColor: theme.colors.background,
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingVertical: 56,
+        paddingVertical: 60,
     },
-    topSpacer: {
-        height: 48,
+    blobTop: {
+        position: 'absolute',
+        top: -80,
+        left: -80,
+        width: 240,
+        height: 240,
+        borderRadius: 120,
+        backgroundColor: theme.colors.primarySoft,
     },
-    centerContent: {
-        alignItems: 'center',
-        justifyContent: 'center',
+    blobBottom: {
+        position: 'absolute',
+        bottom: -80,
+        right: -80,
+        width: 200,
+        height: 200,
+        borderRadius: 100,
+        backgroundColor: 'rgba(34,197,94,0.08)',
+    },
+    center: {
         flex: 1,
-    },
-    logoContainer: {
-        position: 'relative',
-        marginBottom: 40,
         alignItems: 'center',
         justifyContent: 'center',
-        width: 140,
-        height: 140,
+        gap: 20,
     },
-    bgBox1: {
-        position: 'absolute',
-        width: 128,
-        height: 128,
-        backgroundColor: `${theme.colors.primary}0D`,
-        borderRadius: 32,
-        transform: [{ rotate: '12deg' }],
-    },
-    bgBox2: {
-        position: 'absolute',
-        width: 128,
-        height: 128,
-        backgroundColor: `${theme.colors.secondary}0D`,
-        borderRadius: 32,
-        transform: [{ rotate: '-6deg' }],
-    },
-    logoBox: {
-        width: 112,
-        height: 112,
-        backgroundColor: 'white',
-        borderRadius: 24,
+    logoCard: {
+        width: 120,
+        height: 120,
+        borderRadius: theme.borderRadius.l,
+        backgroundColor: '#ffffff',
         alignItems: 'center',
         justifyContent: 'center',
-        borderWidth: 1,
-        borderColor: '#f9fafb',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.05,
-        shadowRadius: 2,
-        elevation: 2,
-        overflow: 'hidden',
-        position: 'relative',
+        // Physical Card
+        borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.8)',
+        borderBottomWidth: 3, borderBottomColor: 'rgba(0,0,0,0.08)',
+        shadowColor: 'black',
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.15,
+        shadowRadius: 20,
+        elevation: 10,
+        marginBottom: 8,
+    },
+    logoGlow: {
+        position: 'absolute',
+        width: 80,
+        height: 80,
+        borderRadius: 40,
+        backgroundColor: theme.colors.primarySoft,
+        // Inset Glow
+        borderWidth: 4, borderColor: 'rgba(255,255,255,0.5)',
     },
     logoImage: {
-        width: '80%',
-        height: '80%',
+        width: 80,
+        height: 80,
     },
-    textContainer: {
-        alignItems: 'center',
-    },
-    paramsText: {
+    appName: {
         fontSize: 36,
         fontWeight: '800',
-        color: '#1c1b1f',
+        color: theme.colors.text,
         letterSpacing: -0.5,
+        textShadowColor: 'rgba(255,255,255,0.8)',
+        textShadowOffset: { width: 0, height: 1 },
+        textShadowRadius: 0,
     },
-    highlight: {
+    appNameAccent: {
         color: theme.colors.primary,
     },
-    dividerContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-        marginTop: 12,
-    },
-    divider: {
-        height: 1,
-        width: 16,
-        backgroundColor: `${theme.colors.primary}33`,
-    },
-    subText: {
-        color: theme.colors.primary,
-        fontSize: 10,
-        fontWeight: 'bold',
-        letterSpacing: 2,
-        textTransform: 'uppercase',
+    tagline: {
+        fontSize: 11,
+        fontWeight: '700',
+        color: theme.colors.textSecondary,
+        letterSpacing: 3,
     },
     footer: {
         alignItems: 'center',
-        gap: 16,
-        paddingBottom: 8,
+        gap: 10,
     },
     secureBadge: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 8,
-        backgroundColor: `${theme.colors.secondary}1A`,
+        gap: 6,
+        gap: 6,
+        backgroundColor: theme.colors.primarySoft,
         paddingVertical: 6,
-        paddingHorizontal: 16,
-        borderRadius: 999,
+        paddingHorizontal: 14,
+        borderRadius: theme.borderRadius.pill,
+        // Matte Pill
+        borderWidth: 1, borderColor: 'rgba(255,255,255,0.5)',
+        borderBottomWidth: 2, borderBottomColor: 'rgba(0,0,0,0.05)',
     },
     secureText: {
-        color: theme.colors.secondary,
         fontSize: 12,
-        fontWeight: 'bold',
-        letterSpacing: 0.5,
+        fontWeight: '600',
+        color: theme.colors.primary,
     },
-    poweredBy: {
-        alignItems: 'center',
-        gap: 2,
-    },
-    poweredLabel: {
-        color: '#9ca3af',
-        fontSize: 10,
-        fontWeight: 'bold',
-        textTransform: 'uppercase',
-        letterSpacing: 1.5,
-    },
-    poweredCompany: {
-        color: '#374151',
-        fontSize: 14,
-        fontWeight: '800',
-    },
-    bottomBar: {
-        width: 144,
-        height: 6,
-        backgroundColor: '#e5e7eb',
-        borderRadius: 999,
-        position: 'absolute',
-        bottom: 0,
+    credit: {
+        fontSize: 12,
+        color: theme.colors.textMuted,
+        fontWeight: '500',
     },
 });
 

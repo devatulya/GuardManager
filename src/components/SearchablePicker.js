@@ -1,7 +1,8 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { useMemo, useState } from 'react';
-import { FlatList, Modal, Pressable, SafeAreaView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { FlatList, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { theme as defaultTheme } from '../theme';
+import ScreenWrapper from './ScreenWrapper';
 
 export default function SearchablePicker({ label, selectedValue, onValueChange, items, placeholder = "Select Item", theme = defaultTheme }) {
     const [visible, setVisible] = useState(false);
@@ -25,7 +26,7 @@ export default function SearchablePicker({ label, selectedValue, onValueChange, 
             </Pressable>
 
             <Modal visible={visible} animationType="slide">
-                <SafeAreaView style={styles.modalContainer}>
+                <ScreenWrapper edges={['top', 'bottom', 'left', 'right']} style={styles.modalContainer}>
                     <View style={styles.modalHeader}>
                         <Text style={styles.modalTitle}>{placeholder}</Text>
                         <Pressable onPress={() => setVisible(false)}>
@@ -67,7 +68,7 @@ export default function SearchablePicker({ label, selectedValue, onValueChange, 
                         )}
                         ListEmptyComponent={<Text style={styles.emptyText}>No matches found</Text>}
                     />
-                </SafeAreaView>
+                </ScreenWrapper>
             </Modal>
         </View>
     );
@@ -93,6 +94,7 @@ const getStyles = (theme) => StyleSheet.create({
         borderColor: theme.colors.border,
         borderRadius: theme.borderRadius.l,
         paddingHorizontal: theme.spacing.m,
+        ...theme.shadows.clayRaised,
     },
     pickerText: {
         fontSize: 16,
@@ -131,6 +133,7 @@ const getStyles = (theme) => StyleSheet.create({
         borderRadius: theme.borderRadius.m,
         paddingHorizontal: theme.spacing.m,
         height: 48,
+        ...theme.shadows.clayRaised,
     },
     searchIcon: {
         marginRight: 8,

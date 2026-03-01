@@ -4,6 +4,22 @@ import * as Sharing from 'expo-sharing';
 import XLSX from 'xlsx';
 import { formatDate } from '../utils/date';
 
+// Re-using the same parser logic from the UI so exports exactly match the screen
+export const parseLegacyExportShift = (item) => {
+    if (item.shiftType) {
+        return item.shiftType === 'Day' ? 'Day Shift' : 'Night Shift';
+    }
+    if (!item.startTime || !item.endTime || item.startTime === '-' || item.endTime === '-') {
+        return '-';
+    }
+    const startHour = parseInt(item.startTime.split(':')[0], 10);
+    if (startHour >= 8 && startHour < 20) {
+        return 'Day Shift';
+    } else {
+        return 'Night Shift';
+    }
+};
+
 // HTML Template for PDF
 const createHTML = (title, subtitle, content) => `
 <!DOCTYPE html>
@@ -40,53 +56,108 @@ export const sharePDF = async (type, entityName, month, data) => {
     let content = '';
 
     if (type === 'Site-wise') {
-        const rows = data.map(item => `
-            <tr>
-                <td>${formatDate(item.date)}</td>
-                <td>${item.guardName}</td>
-                <td>${item.startTime}</td>
-                <td>${item.endTime}</td>
-            </tr>
+        const dutiesCount = data.length;
+        const guardMap = {};
+        const groupedByDate = {};
+
+        data.forEach(item => {
+            guardMap[item.guardName] = (guardMap[item.guardName] || 0) + 1;
+            if (!groupedByDate[item.date]) groupedByDate[item.date] = [];
+            groupedByDate[item.date].push(item);
+        });
+
+        const sortedDates = Object.keys(groupedByDate).sort();
+        const totalGuards = Object.keys(guardMap).length;
+
+        const summaryRows = Object.entries(guardMap).map(([name, count]) => `
+            <div style="margin-left: 20px; font-size: 13px; color: #555;">${name} - ${count} duties</div>
         `).join('');
 
+        const summaryBlock = `
+            <div class="summary-box" style="padding-bottom: 25px;">
+                <div style="font-size: 16px; font-weight: bold; margin-bottom: 12px; color: #1111d4;">Site Name - ${entityName}</div>
+                <div class="summary-row"><span class="summary-label">Total duties done -</span><span class="summary-value">${dutiesCount}</span></div>
+                <div class="summary-row" style="margin-bottom: 8px;"><span class="summary-label">Total Guard worked -</span><span class="summary-value">${totalGuards}</span></div>
+                ${summaryRows}
+            </div>
+        `;
+
+        const groupedTables = sortedDates.map(date => {
+            const records = groupedByDate[date].sort((a, b) => a.guardName.localeCompare(b.guardName));
+
+            const TRs = records.map(item => {
+                const shiftFormat = parseLegacyExportShift(item);
+
+                return `
+                <tr>
+                    <td style="width: 50%;">${item.guardName}</td>
+                    <td style="width: 50%; color: #555;">${shiftFormat}</td>
+                </tr>
+                `;
+            }).join('');
+
+            return `
+                <div style="margin-top: 20px; font-weight: bold; font-size: 14px; background: #f2f2f2; padding: 8px; border: 1px solid #ddd; border-bottom: none;">
+                    ${formatDate(date)} -
+                </div>
+                <table style="margin-top: 0;">
+                    <tbody>
+                        ${TRs}
+                    </tbody>
+                </table>
+            `;
+        }).join('');
+
         content = `
-            <table>
-                <thead>
-                    <tr>
-                        <th>Date</th>
-                        <th>Guard Name</th>
-                        <th>Time In</th>
-                        <th>Time Out</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${rows}
-                </tbody>
-            </table>
+            ${summaryBlock}
+            <h3>Grouped by Date</h3>
+            ${groupedTables}
         `;
     } else if (type === 'Daily') {
-        const rows = data.map(item => `
-            <tr>
-                <td>${item.siteName}</td>
-                <td>${item.guardName}</td>
-                <td>${item.startTime} - ${item.endTime}</td>
-            </tr>
-        `).join('');
+        const groupedBySite = {};
+
+        data.forEach(item => {
+            if (!groupedBySite[item.siteName]) groupedBySite[item.siteName] = [];
+            groupedBySite[item.siteName].push(item);
+        });
+
+        const sortedSites = Object.keys(groupedBySite).sort();
+
+        const groupedTables = sortedSites.map(siteName => {
+            const records = groupedBySite[siteName].sort((a, b) => a.guardName.localeCompare(b.guardName));
+
+            const TRs = records.map(item => {
+                return `
+                <tr>
+                    <td style="width: 50%; padding-left: 20px;">${item.guardName}</td>
+                    <td style="width: 50%; color: #555;">${parseLegacyExportShift(item)}</td>
+                </tr>
+                `;
+            }).join('');
+
+            return `
+                <div style="margin-top: 20px; font-weight: bold; font-size: 15px; color: #1111d4; padding: 4px;">
+                    Site Name - ${siteName}
+                </div>
+                <table style="margin-top: 5px;">
+                    <thead>
+                        <tr>
+                            <th style="padding-left: 10px;">Guards -</th>
+                            <th>Shift</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${TRs}
+                    </tbody>
+                </table>
+            `;
+        }).join('');
 
         content = `
-            <h3>Daily Attendance Report</h3>
-            <table>
-                <thead>
-                    <tr>
-                        <th style="width: 35%">Site Name</th>
-                        <th style="width: 35%">Guard Name</th>
-                        <th style="width: 30%">Time (In - Out)</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${rows}
-                </tbody>
-            </table>
+            <div style="font-size: 16px; font-weight: bold; margin-bottom: 20px; background: #f2f2f2; padding: 12px; border-radius: 4px;">
+                Date - ${month}
+            </div>
+            ${groupedTables}
         `;
     } else {
         // Guard-wise Logic (Summary + Table)
@@ -106,8 +177,7 @@ export const sharePDF = async (type, entityName, month, data) => {
             <tr>
                 <td>${formatDate(item.date)}</td>
                 <td>${item.siteName}</td>
-                <td>${item.startTime}</td>
-                <td>${item.endTime}</td>
+                <td colspan="2" style="text-align: center;">${parseLegacyExportShift(item)}</td>
             </tr>
         `).join('');
 
@@ -119,8 +189,7 @@ export const sharePDF = async (type, entityName, month, data) => {
                     <tr>
                         <th>Date</th>
                         <th>Site Name</th>
-                        <th>Time In</th>
-                        <th>Time Out</th>
+                        <th colspan="2" style="text-align: center;">Shift</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -145,18 +214,66 @@ export const shareExcel = async (type, entityName, month, data) => {
     let wsData = [];
 
     if (type === 'Site-wise') {
-        // Headers
-        wsData.push(['Date', 'Guard Name', 'Time In', 'Time Out']);
-        // Data
+        const dutiesCount = data.length;
+        const guardMap = {};
+        const groupedByDate = {};
+
         data.forEach(item => {
-            wsData.push([formatDate(item.date), item.guardName, item.startTime, item.endTime]);
+            guardMap[item.guardName] = (guardMap[item.guardName] || 0) + 1;
+            if (!groupedByDate[item.date]) groupedByDate[item.date] = [];
+            groupedByDate[item.date].push(item);
+        });
+
+        const sortedDates = Object.keys(groupedByDate).sort();
+        const totalGuards = Object.keys(guardMap).length;
+
+        wsData.push(['Site Name', entityName]);
+        wsData.push(['Total duties done', dutiesCount]);
+        wsData.push(['Total Guard worked', totalGuards]);
+
+        Object.entries(guardMap).forEach(([name, count]) => {
+            wsData.push(['', `${name} - ${count} duties`]);
+        });
+
+        wsData.push([]);
+
+        // Grouped by date body
+        sortedDates.forEach(date => {
+            wsData.push([`${formatDate(date)} -`]); // Date Header Row
+            const records = groupedByDate[date].sort((a, b) => a.guardName.localeCompare(b.guardName));
+
+            records.forEach(item => {
+                const shiftFormat = parseLegacyExportShift(item);
+
+                wsData.push([item.guardName, shiftFormat]);
+            });
+            wsData.push([]); // Gap between dates
         });
     } else if (type === 'Daily') {
-        // Headers
-        wsData.push(['Site Name', 'Guard Name', 'Time (In - Out)']);
-        // Data
+        const groupedBySite = {};
+
         data.forEach(item => {
-            wsData.push([item.siteName, item.guardName, `${item.startTime} - ${item.endTime}`]);
+            if (!groupedBySite[item.siteName]) groupedBySite[item.siteName] = [];
+            groupedBySite[item.siteName].push(item);
+        });
+
+        const sortedSites = Object.keys(groupedBySite).sort();
+
+        // 1. Top Level Date Header
+        wsData.push([`Date - ${month}`]);
+        wsData.push([]);
+
+        // 2. Loop over Sites
+        sortedSites.forEach(siteName => {
+            wsData.push([`Site Name - ${siteName}`]);
+            wsData.push(['Guards -', 'Shift']); // Column Headers for this Sub-table
+
+            const records = groupedBySite[siteName].sort((a, b) => a.guardName.localeCompare(b.guardName));
+            records.forEach(item => {
+                wsData.push([item.guardName, parseLegacyExportShift(item)]);
+            });
+
+            wsData.push([]); // blank row spacing
         });
     } else {
         // Guard-wise
@@ -172,12 +289,12 @@ export const shareExcel = async (type, entityName, month, data) => {
 
         // Table Headers
         wsData.push(['ATTENDANCE HISTORY']);
-        wsData.push(['Date', 'Site Name', 'Time In', 'Time Out']);
+        wsData.push(['Date', 'Site Name', 'Shift']);
 
         // Data
         if (data.attendance) {
             data.attendance.forEach(item => {
-                wsData.push([formatDate(item.date), item.siteName, item.startTime, item.endTime]);
+                wsData.push([formatDate(item.date), item.siteName, parseLegacyExportShift(item)]);
             });
         }
     }
@@ -193,8 +310,91 @@ export const shareExcel = async (type, entityName, month, data) => {
 
         await FileSystem.writeAsStringAsync(uri, wbout, { encoding: 'base64' });
         await Sharing.shareAsync(uri, { UTI: '.xlsx', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        return uri;
     } catch (error) {
         console.error('Error generating Excel:', error);
+        throw error;
+    }
+};
+
+/**
+ * Generate and share a PDF for Advances
+ */
+export const shareAdvancesPDF = async (advancesList, totalAmount, monthStr) => {
+    try {
+        const rows = advancesList.map(item => `
+            <tr>
+                <td>${item.guardName || 'Unknown'}</td>
+                <td>${item.date}</td>
+                <td style="text-align: right; color: #d9534f; font-weight: bold;">-₹${Number(item.amount).toFixed(2)}</td>
+            </tr>
+        `).join('');
+
+        const [year, month] = monthStr.split('-');
+        const dateObj = new Date(year, month - 1);
+        const displayMonth = dateObj.toLocaleString('default', { month: 'long', year: 'numeric' });
+
+        const htmlRaw = `
+            <!DOCTYPE html>
+            <html>
+                <head>
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no" />
+                    <style>
+                        body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding: 20px; color: #272727; }
+                        h1 { color: #4F98CA; text-align: center; margin-bottom: 5px; }
+                        .summary-box { 
+                            background-color: #EFFFFB; 
+                            border: 2px solid #50D890; 
+                            border-radius: 8px; 
+                            padding: 15px; 
+                            margin: 20px 0; 
+                            text-align: center;
+                        }
+                        .summary-title { font-size: 16px; color: #4F98CA; margin-bottom: 5px; font-weight: bold; }
+                        .summary-amount { font-size: 24px; color: #272727; font-weight: bold; }
+                        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+                        th { background-color: #4F98CA; color: white; padding: 12px; text-align: left; }
+                        th:last-child { text-align: right; }
+                        td { padding: 12px; border-bottom: 1px solid #eee; }
+                        tr:nth-child(even) { background-color: #f9f9f9; }
+                    </style>
+                </head>
+                <body>
+                    <h1>Advances Report</h1>
+                    <p style="text-align: center; color: #666; margin-top: 0;">Generated on ${new Date().toLocaleDateString()}</p>
+
+                    <div class="summary-box">
+                        <div class="summary-title">Total Advances for ${displayMonth}</div>
+                        <div class="summary-amount">₹${totalAmount.toFixed(2)}</div>
+                    </div>
+
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Guard Name</th>
+                                <th>Date Issued</th>
+                                <th>Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${rows}
+                        </tbody>
+                    </table>
+                </body>
+            </html>
+        `;
+
+        const { uri } = await Print.printToFileAsync({ html: htmlRaw });
+
+        if (await Sharing.isAvailableAsync()) {
+            await Sharing.shareAsync(uri, { UTI: '.pdf', mimeType: 'application/pdf' });
+        } else {
+            alert('Sharing is not available on this device');
+        }
+
+        return uri;
+    } catch (error) {
+        console.error('Error generating Advances PDF:', error);
         throw error;
     }
 };

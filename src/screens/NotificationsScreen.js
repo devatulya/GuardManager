@@ -1,7 +1,7 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { useMemo } from 'react';
 import { FlatList, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import ScreenWrapper from '../components/ScreenWrapper';
 import { useTheme } from '../context/ThemeContext';
 
 const MOCK_NOTIFICATIONS = [
@@ -29,7 +29,7 @@ export default function NotificationsScreen() {
     const styles = useMemo(() => getStyles(theme), [theme]);
 
     return (
-        <SafeAreaView style={styles.container}>
+        <ScreenWrapper edges={['top', 'left', 'right']} style={styles.container}>
             <View style={styles.header}>
                 <Text style={styles.headerTitle}>Notifications</Text>
             </View>
@@ -39,7 +39,7 @@ export default function NotificationsScreen() {
                 renderItem={({ item }) => <NotificationItem item={item} theme={theme} styles={styles} />}
                 contentContainerStyle={styles.list}
             />
-        </SafeAreaView>
+        </ScreenWrapper>
     );
 }
 

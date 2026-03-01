@@ -2,18 +2,18 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback, useMemo, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import ScreenWrapper from '../components/ScreenWrapper';
 import { useTheme } from '../context/ThemeContext';
 import { getSites } from '../services/sites';
 
-const SiteCard = ({ site, theme, styles }) => (
+const SiteCard = ({ site, index, theme, styles }) => (
     <View style={styles.card}>
         <View style={styles.cardContent}>
             <View style={styles.iconContainer}>
                 <MaterialIcons name="location-on" size={24} color={theme.colors.primary} />
             </View>
             <View style={styles.textContainer}>
-                <Text style={styles.siteName} numberOfLines={1}>{site.name}</Text>
+                <Text style={styles.siteName} numberOfLines={1}>{index}. {site.name}</Text>
                 <Text style={styles.siteAddress} numberOfLines={1}>{site.address}</Text>
             </View>
         </View>
@@ -34,7 +34,13 @@ export default function SitesListScreen({ navigation }) {
         setLoading(true);
         try {
             const data = await getSites();
-            setSites(data);
+            // Automatically sort alphabetically if not already done by the query
+            const sortedData = data.sort((a, b) => {
+                const nameA = a.name || '';
+                const nameB = b.name || '';
+                return nameA.localeCompare(nameB);
+            });
+            setSites(sortedData);
         } catch (error) {
             console.error(error);
         } finally {
@@ -54,7 +60,7 @@ export default function SitesListScreen({ navigation }) {
     );
 
     return (
-        <SafeAreaView style={styles.container}>
+        <ScreenWrapper edges={['top', 'left', 'right']} style={styles.container}>
             <View style={styles.header}>
                 <View style={styles.headerTop}>
                     <MaterialIcons name="menu" size={28} color={theme.colors.text} />
@@ -78,9 +84,9 @@ export default function SitesListScreen({ navigation }) {
             <FlatList
                 data={filteredSites}
                 keyExtractor={item => item.id}
-                renderItem={({ item }) => (
+                renderItem={({ item, index }) => (
                     <Pressable onPress={() => navigation.navigate('AddSite', { site: item })}>
-                        <SiteCard site={item} theme={theme} styles={styles} />
+                        <SiteCard site={item} index={index + 1} theme={theme} styles={styles} />
                     </Pressable>
                 )}
                 contentContainerStyle={styles.listContent}
@@ -95,7 +101,7 @@ export default function SitesListScreen({ navigation }) {
             >
                 <MaterialIcons name="add" size={30} color={theme.colors.white} />
             </Pressable>
-        </SafeAreaView>
+        </ScreenWrapper>
     );
 }
 
@@ -163,11 +169,7 @@ const getStyles = (theme) => StyleSheet.create({
         borderRadius: theme.borderRadius.l,
         borderWidth: 1,
         borderColor: theme.colors.border,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.05,
-        shadowRadius: 2,
-        elevation: 1,
+        ...theme.shadows.clayRaised,
         marginBottom: theme.spacing.s,
     },
     cardContent: {

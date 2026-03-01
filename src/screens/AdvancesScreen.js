@@ -3,8 +3,8 @@ import { useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import DateTimePickerField from '../components/DateTimePickerField';
+import ScreenWrapper from '../components/ScreenWrapper';
 import SearchablePicker from '../components/SearchablePicker';
 import { useTheme } from '../context/ThemeContext';
 import { addAdvance, getRecentAdvances } from '../services/advances';
@@ -117,7 +117,7 @@ export default function AdvancesScreen({ navigation }) {
     };
 
     return (
-        <SafeAreaView style={styles.container}>
+        <ScreenWrapper edges={['top', 'left', 'right']} style={styles.container}>
             <View style={styles.header}>
                 <Pressable onPress={() => navigation.goBack()} style={styles.backButton}>
                     <MaterialIcons name="arrow-back-ios" size={24} color={theme.colors.text} />
@@ -221,7 +221,7 @@ export default function AdvancesScreen({ navigation }) {
                     )
                 }
             />
-        </SafeAreaView>
+        </ScreenWrapper>
     );
 }
 
@@ -278,11 +278,7 @@ const getStyles = (theme) => StyleSheet.create({
         borderColor: theme.colors.border,
         overflow: 'hidden',
         marginBottom: 24,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 4,
-        elevation: 2,
+        ...theme.shadows.clayRaised,
     },
     heroBanner: {
         height: 128,
@@ -388,6 +384,7 @@ const getStyles = (theme) => StyleSheet.create({
         borderRadius: theme.borderRadius.xl,
         borderWidth: 1,
         borderColor: theme.colors.border,
+        ...theme.shadows.clayRaised,
     },
     cardLeft: {
         flexDirection: 'row',
