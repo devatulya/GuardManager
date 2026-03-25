@@ -1,5 +1,5 @@
 import { getDoc, getDocs, orderBy, query, where } from 'firebase/firestore';
-import { getAdvancesForGuard } from './advances';
+import { getAdvancesForGuard, getAllAdvances } from './advances';
 import { getScopedCollection, getScopedDoc } from './firestore';
 
 /**
@@ -94,7 +94,11 @@ export const generateGuardWiseReport = async (guardId, month) => {
         const daysWorked = attendanceList.length; // Simple count of records
 
         // 3. Fetch Advances
-        const totalAdvances = await getAdvancesForGuard(guardId, month);
+        const advancesList = await getAllAdvances(guardId, month);
+        let totalAdvances = 0;
+        advancesList.forEach(adv => {
+            totalAdvances += (Number(adv.amount) || 0);
+        });
 
         // 4. Salary Calculation
         // daysInMonth: using lastDay calculated above
@@ -113,7 +117,8 @@ export const generateGuardWiseReport = async (guardId, month) => {
             monthlySalary,
             totalAdvances,
             finalPayable: Math.round(finalPayable), // Rounding for display
-            attendance: attendanceList
+            attendance: attendanceList,
+            advancesList // New field
         };
 
     } catch (error) {
@@ -152,15 +157,77 @@ export const generateDailyReport = async (date) => {
             };
         });
 
-        // 3. Sorting Requirement: Site Name (A-Z) -> Guard Name (A-Z)
+        // 3. Sorting Requirement: Site Name (A-Z) -> Shift (Day first) -> Guard Name (A-Z)
         return data.sort((a, b) => {
             const siteComparison = (a.siteName || '').localeCompare(b.siteName || '');
             if (siteComparison !== 0) return siteComparison;
+            const shiftComparison = (a.shiftType === 'Night' ? 1 : 0) - (b.shiftType === 'Night' ? 1 : 0);
+            if (shiftComparison !== 0) return shiftComparison;
             return (a.guardName || '').localeCompare(b.guardName || '');
         });
 
     } catch (error) {
         console.error("Error generating daily report:", error);
+        return [];
+    }
+};
+
+/**
+ * Report Type 4: All Guards Payout Report (Monthly)
+ * @param {string} month (YYYY-MM)
+ * @returns {Promise<Array>} Array of payout details for all guards
+ */
+export const generateAllGuardsPayoutReport = async (month) => {
+    try {
+        if (!month) return [];
+
+        const guardsRef = getScopedCollection('guards');
+        const guardsSnap = await getDocs(query(guardsRef, orderBy('name', 'asc')));
+
+        const reports = await Promise.all(guardsSnap.docs.map(async (guardDoc) => {
+            const guardId = guardDoc.id;
+            const guardData = guardDoc.data();
+            const guardName = guardData.name || 'Unknown';
+            const monthlySalary = Number(guardData.monthlySalary) || 0;
+
+            // Calculate date range
+            const startDate = `${month}-01`;
+            const [year, m] = month.split('-').map(Number);
+            const lastDay = new Date(year, m, 0).getDate();
+            const endDate = `${month}-${lastDay}`;
+
+            // Fetch attendance
+            const attendanceRef = getScopedCollection('attendance');
+            const q = query(
+                attendanceRef,
+                where('guardId', '==', guardId),
+                where('date', '>=', startDate),
+                where('date', '<=', endDate)
+            );
+            const attSnapshot = await getDocs(q);
+            const daysWorked = attSnapshot.docs.length;
+
+            // Fetch advances
+            const totalAdvances = await getAdvancesForGuard(guardId, month);
+
+            // Salary Calculation
+            const perDaySalary = lastDay > 0 ? (monthlySalary / lastDay) : 0;
+            const earnedSalary = perDaySalary * daysWorked;
+            const finalPayable = earnedSalary - totalAdvances;
+
+            return {
+                guardName,
+                duties: daysWorked,
+                advanced: totalAdvances,
+                payout: Math.round(finalPayable),
+            };
+        }));
+
+        // Sort by guard name
+        return reports.sort((a, b) => a.guardName.localeCompare(b.guardName));
+
+    } catch (error) {
+        console.error("Error generating all guards payout report:", error);
         return [];
     }
 };

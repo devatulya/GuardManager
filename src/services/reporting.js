@@ -83,7 +83,10 @@ export const sharePDF = async (type, entityName, month, data) => {
         `;
 
         const groupedTables = sortedDates.map(date => {
-            const records = groupedByDate[date].sort((a, b) => a.guardName.localeCompare(b.guardName));
+            const records = groupedByDate[date].sort((a, b) => {
+                const shiftCmp = (a.shiftType === 'Night' ? 1 : 0) - (b.shiftType === 'Night' ? 1 : 0);
+                return shiftCmp || a.guardName.localeCompare(b.guardName);
+            });
 
             const TRs = records.map(item => {
                 const shiftFormat = parseLegacyExportShift(item);
@@ -124,7 +127,10 @@ export const sharePDF = async (type, entityName, month, data) => {
         const sortedSites = Object.keys(groupedBySite).sort();
 
         const groupedTables = sortedSites.map(siteName => {
-            const records = groupedBySite[siteName].sort((a, b) => a.guardName.localeCompare(b.guardName));
+            const records = groupedBySite[siteName].sort((a, b) => {
+                const shiftCmp = (a.shiftType === 'Night' ? 1 : 0) - (b.shiftType === 'Night' ? 1 : 0);
+                return shiftCmp || a.guardName.localeCompare(b.guardName);
+            });
 
             const TRs = records.map(item => {
                 return `
@@ -158,6 +164,55 @@ export const sharePDF = async (type, entityName, month, data) => {
                 Date - ${month}
             </div>
             ${groupedTables}
+        `;
+    } else if (type === 'All-Guards-Payout') {
+        const totalPayout = data.reduce((acc, curr) => acc + (Number(curr.payout) || 0), 0);
+        const totalAdvances = data.reduce((acc, curr) => acc + (Number(curr.advanced) || 0), 0);
+
+        const summaryBlock = `
+            <div class="summary-box">
+                <div class="summary-row"><span class="summary-label">Month:</span><span class="summary-value">${month}</span></div>
+                <div class="summary-row"><span class="summary-label">Total Guards:</span><span class="summary-value">${data.length}</span></div>
+                <div class="summary-row total-row"><span class="summary-label">Total Advances:</span><span class="summary-value" style="color:#dc3545;">₹${totalAdvances}</span></div>
+                <div class="summary-row total-row"><span class="summary-label">Final Amount:</span><span class="summary-value total-value">₹${totalPayout}</span></div>
+            </div>
+        `;
+
+        const rows = data.map(item => `
+            <tr>
+                <td>${item.guardName}</td>
+                <td style="text-align: center;">${item.duties}</td>
+                <td style="text-align: right; color: #dc3545;">${item.advanced}</td>
+                <td style="text-align: right; font-weight: bold;">${item.payout}</td>
+            </tr>
+        `).join('');
+
+        const totalsRow = `
+            <tr style="font-weight: bold; border-top: 2px solid #ccc; background: #f9f9f9;">
+                <td>TOTAL</td>
+                <td></td>
+                <td style="text-align: right; color: #dc3545;">₹${totalAdvances}</td>
+                <td style="text-align: right; color: #10b981;">₹${totalPayout}</td>
+            </tr>
+        `;
+
+        content = `
+            ${summaryBlock}
+            <h3>Payout Details</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Guard Name</th>
+                        <th style="text-align: center;">Duties</th>
+                        <th style="text-align: right;">Advanced</th>
+                        <th style="text-align: right;">Payout</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${rows}
+                    ${totalsRow}
+                </tbody>
+            </table>
         `;
     } else {
         // Guard-wise Logic (Summary + Table)
@@ -196,6 +251,28 @@ export const sharePDF = async (type, entityName, month, data) => {
                     ${rows}
                 </tbody>
             </table>
+
+            <h3>Advances History</h3>
+            ${(!data.advancesList || data.advancesList.length === 0) ? `
+                <p style="text-align: center; color: #666;">No advances this month</p>
+            ` : `
+            <table>
+                <thead>
+                    <tr>
+                        <th>Date Given</th>
+                        <th>Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${data.advancesList.map(adv => `
+                        <tr>
+                            <td>${formatDate(adv.date)}</td>
+                            <td style="color: #dc3545; font-weight: bold;">-₹${adv.amount}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+            `}
         `;
     }
 
@@ -240,7 +317,10 @@ export const shareExcel = async (type, entityName, month, data) => {
         // Grouped by date body
         sortedDates.forEach(date => {
             wsData.push([`${formatDate(date)} -`]); // Date Header Row
-            const records = groupedByDate[date].sort((a, b) => a.guardName.localeCompare(b.guardName));
+            const records = groupedByDate[date].sort((a, b) => {
+                const shiftCmp = (a.shiftType === 'Night' ? 1 : 0) - (b.shiftType === 'Night' ? 1 : 0);
+                return shiftCmp || a.guardName.localeCompare(b.guardName);
+            });
 
             records.forEach(item => {
                 const shiftFormat = parseLegacyExportShift(item);
@@ -268,13 +348,34 @@ export const shareExcel = async (type, entityName, month, data) => {
             wsData.push([`Site Name - ${siteName}`]);
             wsData.push(['Guards -', 'Shift']); // Column Headers for this Sub-table
 
-            const records = groupedBySite[siteName].sort((a, b) => a.guardName.localeCompare(b.guardName));
+            const records = groupedBySite[siteName].sort((a, b) => {
+                const shiftCmp = (a.shiftType === 'Night' ? 1 : 0) - (b.shiftType === 'Night' ? 1 : 0);
+                return shiftCmp || a.guardName.localeCompare(b.guardName);
+            });
             records.forEach(item => {
                 wsData.push([item.guardName, parseLegacyExportShift(item)]);
             });
 
             wsData.push([]); // blank row spacing
         });
+    } else if (type === 'All-Guards-Payout') {
+        const totalPayout = data.reduce((acc, curr) => acc + (Number(curr.payout) || 0), 0);
+        const totalAdvances = data.reduce((acc, curr) => acc + (Number(curr.advanced) || 0), 0);
+
+        wsData.push(['PAYOUT STATEMENT']);
+        wsData.push(['Month', month]);
+        wsData.push(['Total Guards', data.length]);
+        wsData.push(['Total Advances', totalAdvances]);
+        wsData.push(['Final Amount', totalPayout]);
+        wsData.push([]);
+
+        wsData.push(['Guard Name', 'Duties', 'Advanced', 'Payout']);
+
+        data.forEach(item => {
+            wsData.push([item.guardName, item.duties, item.advanced, item.payout]);
+        });
+
+        wsData.push(['TOTAL', '', totalAdvances, totalPayout]);
     } else {
         // Guard-wise
         // Summary Block
@@ -295,6 +396,21 @@ export const shareExcel = async (type, entityName, month, data) => {
         if (data.attendance) {
             data.attendance.forEach(item => {
                 wsData.push([formatDate(item.date), item.siteName, parseLegacyExportShift(item)]);
+            });
+        }
+
+        // Advances History
+        wsData.push([]); // Empty row
+        wsData.push(['ADVANCES HISTORY']);
+        if (!data.advancesList || data.advancesList.length === 0) {
+            wsData.push(['No advances this month']);
+        } else {
+            wsData.push(['Date Given', 'Amount']);
+            data.advancesList.forEach(adv => {
+                wsData.push([
+                    formatDate(adv.date),
+                    `-₹${adv.amount}`
+                ]);
             });
         }
     }

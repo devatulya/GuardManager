@@ -127,7 +127,11 @@ export default function AdvancesListScreen({ navigation }) {
                 </View>
                 <View style={styles.cardRight}>
                     <Text style={styles.amountText}>-₹{Number(item.amount).toFixed(2)}</Text>
-                    <Text style={styles.typeText}>PAYROLL DEDUCT</Text>
+                    {item.forMonth ? (
+                        <Text style={styles.forMonthText}>For: {item.forMonth}</Text>
+                    ) : (
+                        <Text style={styles.typeText}>PAYROLL DEDUCT</Text>
+                    )}
                 </View>
                 <Text style={styles.hintText}>Long press to delete</Text>
             </Pressable>
@@ -331,6 +335,12 @@ const getStyles = (theme) => StyleSheet.create({
         fontSize: 10,
         fontWeight: 'bold',
         color: theme.colors.textSecondary,
+    },
+    forMonthText: {
+        fontSize: 11,
+        fontWeight: '600',
+        color: theme.colors.primary,
+        marginTop: 2,
     },
     emptyContainer: {
         padding: 24,

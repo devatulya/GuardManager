@@ -1,4 +1,3 @@
-import Text from '../components/Text';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useIsFocused } from '@react-navigation/native';
 import { useEffect, useMemo, useState } from 'react';
@@ -6,6 +5,7 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'reac
 import DateTimePickerField from '../components/DateTimePickerField';
 import ScreenWrapper from '../components/ScreenWrapper';
 import SearchablePicker from '../components/SearchablePicker';
+import Text from '../components/Text';
 import { useTheme } from '../context/ThemeContext';
 import { getGuards } from '../services/guards';
 import * as Reports from '../services/reports';
@@ -26,6 +26,7 @@ export default function ReportsScreen({ navigation }) {
     const [selectedMonth, setSelectedMonth] = useState(new Date()); // For Guard-wise
 
     const [loading, setLoading] = useState(false);
+    const [payoutLoading, setPayoutLoading] = useState(false);
 
     useEffect(() => {
         if (isFocused) {
@@ -107,6 +108,31 @@ export default function ReportsScreen({ navigation }) {
             alert(`Error generating report: ${e.message}`);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleGenerateAllGuardsPayout = async () => {
+        setPayoutLoading(true);
+        try {
+            const formatMonth = (d) => {
+                const year = d.getFullYear();
+                const month = String(d.getMonth() + 1).padStart(2, '0');
+                return `${year}-${month}`;
+            };
+            const monthStr = formatMonth(selectedMonth);
+            const data = await Reports.generateAllGuardsPayoutReport(monthStr);
+            navigation.navigate('ReportResults', {
+                type: 'All-Guards-Payout',
+                entityId: 'all',
+                entityName: 'All Guards',
+                month: monthStr,
+                data
+            });
+        } catch (e) {
+            console.error(e);
+            alert(`Error generating payout report: ${e.message}`);
+        } finally {
+            setPayoutLoading(false);
         }
     };
 
@@ -214,6 +240,22 @@ export default function ReportsScreen({ navigation }) {
                         </View>
                     )}
                 </View>
+
+                {/* Payout Report Button — only shown for Guard-wise */}
+                {reportType === 'Guard-wise' && (
+                    <Pressable
+                        style={[styles.primaryButton, { marginTop: 16, height: 48, backgroundColor: theme.colors.tertiary }]}
+                        onPress={handleGenerateAllGuardsPayout}
+                        disabled={payoutLoading}
+                    >
+                        {payoutLoading ? <ActivityIndicator color="white" size="small" /> : (
+                            <>
+                                <MaterialIcons name="groups" size={20} color="white" style={{ marginRight: 8 }} />
+                                <Text style={[styles.buttonText, { fontSize: 14 }]}>Generate Payout Report (All Guards)</Text>
+                            </>
+                        )}
+                    </Pressable>
+                )}
             </ScrollView>
 
             <View style={styles.footer}>

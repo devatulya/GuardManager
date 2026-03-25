@@ -227,7 +227,7 @@ const styles = StyleSheet.create({
         flex: 1,
         fontFamily: 'Arial',
         fontSize: 15,
-        color: '#1e293b',
+        color: '#283739',
         fontWeight: '700',
     },
     primaryBtn: {

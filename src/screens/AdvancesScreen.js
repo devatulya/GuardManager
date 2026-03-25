@@ -22,6 +22,7 @@ export default function AdvancesScreen({ navigation }) {
     const [selectedGuardId, setSelectedGuardId] = useState('');
     const [amount, setAmount] = useState('');
     const [date, setDate] = useState(new Date());
+    const [forMonth, setForMonth] = useState(new Date()); // Which month this advance is for
 
     const [loading, setLoading] = useState(false);
     const [loadingList, setLoadingList] = useState(true);
@@ -74,7 +75,8 @@ export default function AdvancesScreen({ navigation }) {
                 guardName: guard?.name || 'Unknown',
                 amount: Number(amount),
                 date: dateStr,
-                type: 'payroll_deduct', // Defaulting to payroll deduct as per UI
+                forMonth: `${forMonth.getFullYear()}-${String(forMonth.getMonth() + 1).padStart(2, '0')}`,
+                type: 'payroll_deduct',
                 notes: 'Payroll Advance'
             });
 
@@ -84,6 +86,7 @@ export default function AdvancesScreen({ navigation }) {
             setAmount('');
             setSelectedGuardId('');
             setDate(new Date());
+            setForMonth(new Date());
 
             // Refresh list
             await fetchRecentAdvances();
@@ -111,7 +114,9 @@ export default function AdvancesScreen({ navigation }) {
                 </View>
                 <View style={styles.cardRight}>
                     <Text style={styles.amountText}>-₹{Number(item.amount).toFixed(2)}</Text>
-                    <Text style={styles.typeText}>PAYROLL DEDUCT</Text>
+                    {item.forMonth && (
+                        <Text style={styles.forMonthText}>For: {item.forMonth}</Text>
+                    )}
                 </View>
             </View>
         );
@@ -179,13 +184,45 @@ export default function AdvancesScreen({ navigation }) {
                                         </View>
                                     </View>
                                     <View style={[styles.inputGroup, { flex: 1, marginLeft: 12 }]}>
-                                        <Text style={styles.label}>Date</Text>
+                                        <Text style={styles.label}>Date Given</Text>
                                         <DateTimePickerField
                                             value={date}
                                             onChange={setDate}
                                             mode="date"
                                             theme={theme}
                                         />
+                                    </View>
+                                </View>
+
+                                <View style={styles.inputGroup}>
+                                    <Text style={styles.label}>For Which Month</Text>
+                                    <View style={styles.monthSelector}>
+                                        <Pressable
+                                            style={styles.monthArrow}
+                                            onPress={() => {
+                                                const prev = new Date(forMonth);
+                                                prev.setMonth(prev.getMonth() - 1);
+                                                setForMonth(prev);
+                                            }}
+                                        >
+                                            <MaterialIcons name="chevron-left" size={28} color={theme.colors.primary} />
+                                        </Pressable>
+                                        <View style={styles.monthDisplay}>
+                                            <MaterialIcons name="calendar-today" size={18} color={theme.colors.primary} style={{ marginRight: 8 }} />
+                                            <Text style={styles.monthText}>
+                                                {forMonth.toLocaleString('default', { month: 'long', year: 'numeric' })}
+                                            </Text>
+                                        </View>
+                                        <Pressable
+                                            style={styles.monthArrow}
+                                            onPress={() => {
+                                                const next = new Date(forMonth);
+                                                next.setMonth(next.getMonth() + 1);
+                                                setForMonth(next);
+                                            }}
+                                        >
+                                            <MaterialIcons name="chevron-right" size={28} color={theme.colors.primary} />
+                                        </Pressable>
                                     </View>
                                 </View>
 
@@ -427,6 +464,40 @@ const getStyles = (theme) => StyleSheet.create({
         fontWeight: 'bold',
         color: theme.colors.textSecondary,
         marginTop: 2,
+    },
+    forMonthText: {
+        fontSize: 11,
+        fontWeight: '600',
+        color: theme.colors.primary,
+        marginTop: 2,
+    },
+    monthSelector: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: theme.colors.cardBackground,
+        borderWidth: 1,
+        borderColor: theme.colors.border,
+        borderRadius: theme.borderRadius.l,
+        height: 52,
+        overflow: 'hidden',
+    },
+    monthArrow: {
+        width: 44,
+        height: '100%',
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: `${theme.colors.primary}0D`,
+    },
+    monthDisplay: {
+        flex: 1,
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    monthText: {
+        fontSize: 15,
+        fontWeight: '700',
+        color: theme.colors.text,
     },
     emptyContainer: {
         padding: 24,

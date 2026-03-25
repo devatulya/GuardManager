@@ -7,6 +7,12 @@ import ScreenWrapper from '../components/ScreenWrapper';
 import { useTheme } from '../context/ThemeContext';
 import { deleteAttendance, getAttendanceByDate } from '../services/attendance';
 
+// Alternating site colors for visual differentiation
+const SITE_COLORS = [
+    { bg: '#dc262615', border: '#dc2626', text: '#dc2626', light: '#fef2f2' },  // Red
+    { bg: '#2563eb15', border: '#2563eb', text: '#2563eb', light: '#eff6ff' },  // Blue
+];
+
 const formatDateHeader = (dateStr) => {
     if (!dateStr) return '';
     const date = new Date(dateStr);
@@ -30,7 +36,7 @@ export default function AttendanceReviewScreen({ route, navigation }) {
             const sortedData = data.sort((a, b) => {
                 const siteA = a.siteName || '';
                 const siteB = b.siteName || '';
-                return siteA.localeCompare(siteB);
+                return siteA.localeCompare(siteB) || ((a.shiftType === 'Night' ? 1 : 0) - (b.shiftType === 'Night' ? 1 : 0)) || (a.guardName || '').localeCompare(b.guardName || '');
             });
             setAttendanceList(sortedData);
         } catch (error) {
@@ -118,38 +124,88 @@ export default function AttendanceReviewScreen({ route, navigation }) {
         );
     };
 
-    const renderItem = ({ item }) => {
+    // Build site color map for alternating colors
+    const siteColorMap = useMemo(() => {
+        const map = {};
+        let siteIndex = 0;
+        attendanceList.forEach(item => {
+            const siteName = (item.siteName || 'Unknown Site').toLowerCase();
+            if (!(siteName in map)) {
+                map[siteName] = SITE_COLORS[siteIndex % 2];
+                siteIndex++;
+            }
+        });
+        return map;
+    }, [attendanceList]);
+
+    // Group items by site for section rendering
+    const groupedData = useMemo(() => {
+        const result = [];
+        let lastSite = null;
+        attendanceList.forEach(item => {
+            const siteName = (item.siteName || 'Unknown Site').toLowerCase();
+            if (siteName !== lastSite) {
+                result.push({ type: 'header', siteName: item.siteName || 'Unknown Site', key: `header-${siteName}` });
+                lastSite = siteName;
+            }
+            result.push({ type: 'item', ...item, key: item.id });
+        });
+        return result;
+    }, [attendanceList]);
+
+    const renderGroupedItem = ({ item }) => {
+        if (item.type === 'header') {
+            const siteColor = siteColorMap[(item.siteName || 'Unknown Site').toLowerCase()];
+            return (
+                <View style={[
+                    styles.siteGroupHeader,
+                    { backgroundColor: siteColor.bg, borderLeftColor: siteColor.border }
+                ]}>
+                    <MaterialIcons name="location-on" size={18} color={siteColor.text} />
+                    <Text style={[styles.siteGroupHeaderText, { color: siteColor.text }]}>
+                        {item.siteName}
+                    </Text>
+                </View>
+            );
+        }
+
         const isSelected = selectedIds.has(item.id);
+        const siteColor = siteColorMap[(item.siteName || 'Unknown Site').toLowerCase()];
         return (
             <Pressable
                 style={({ pressed }) => [
                     styles.card,
+                    { borderLeftWidth: 3, borderLeftColor: siteColor.border },
                     pressed && styles.cardPressed,
-                    isSelected && styles.cardSelected
+                    isSelected && [styles.cardSelected, { borderColor: siteColor.border }]
                 ]}
                 onLongPress={() => handleLongPress(item.id)}
                 onPress={() => handlePress(item)}
                 delayLongPress={300}
             >
-                <View style={styles.cardHeader}>
-                    <Text style={styles.guardName}>{item.guardName}</Text>
-                    {isSelected && <MaterialIcons name="check-circle" size={20} color={theme.colors.primary} />}
-                    {!isSelected && isSelectionMode && <MaterialIcons name="radio-button-unchecked" size={20} color={theme.colors.slate300} />}
-                </View>
-
-                <View style={[styles.siteBadge, { alignSelf: 'flex-start', marginBottom: 8 }]}>
-                    <Text style={styles.siteText}>{item.siteName || 'Unknown Site'}</Text>
-                </View>
-
-                <View style={styles.timeRow}>
-                    <MaterialIcons
-                        name={item.shiftType === 'Night' ? 'nights-stay' : 'wb-sunny'}
-                        size={16}
-                        color={theme.colors.slate500}
-                    />
-                    <Text style={styles.timeText}>
-                        {item.shiftType === 'Night' ? 'Night Shift' : 'Day Shift'}
-                    </Text>
+                <View style={styles.cardRow}>
+                    {isSelectionMode && (
+                        <MaterialIcons
+                            name={isSelected ? "check-circle" : "radio-button-unchecked"}
+                            size={20}
+                            color={isSelected ? siteColor.text : theme.colors.slate300}
+                            style={{ marginRight: 10 }}
+                        />
+                    )}
+                    <Text style={styles.guardName} numberOfLines={1}>{item.guardName}</Text>
+                    <View style={[styles.siteBadge, { backgroundColor: siteColor.bg }]}>
+                        <Text style={[styles.siteText, { color: siteColor.text }]}>{item.siteName || 'Unknown Site'}</Text>
+                    </View>
+                    <View style={styles.shiftBadge}>
+                        <MaterialIcons
+                            name={item.shiftType === 'Night' ? 'nights-stay' : 'wb-sunny'}
+                            size={14}
+                            color={item.shiftType === 'Night' ? '#3b82f6' : '#f59e0b'}
+                        />
+                        <Text style={styles.shiftText}>
+                            {item.shiftType === 'Night' ? 'Night' : 'Day'}
+                        </Text>
+                    </View>
                 </View>
             </Pressable>
         );
@@ -188,9 +244,9 @@ export default function AttendanceReviewScreen({ route, navigation }) {
             </View>
 
             <FlatList
-                data={attendanceList}
-                keyExtractor={item => item.id}
-                renderItem={renderItem}
+                data={groupedData}
+                keyExtractor={item => item.key}
+                renderItem={renderGroupedItem}
                 contentContainerStyle={styles.listContent}
                 refreshing={loading}
                 onRefresh={fetchAttendance}
@@ -232,58 +288,68 @@ const getStyles = (theme) => StyleSheet.create({
     },
     listContent: {
         padding: theme.spacing.m,
-        gap: theme.spacing.m,
+        gap: 6,
+    },
+    siteGroupHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 10,
+        paddingHorizontal: 12,
+        marginBottom: 8,
+        borderLeftWidth: 4,
+        borderRadius: 6,
+    },
+    siteGroupHeaderText: {
+        fontSize: 14,
+        fontWeight: 'bold',
+        marginLeft: 8,
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
     },
     card: {
         backgroundColor: theme.colors.cardBackground,
-        padding: theme.spacing.m,
-        borderRadius: theme.borderRadius.l,
+        paddingVertical: 10,
+        paddingHorizontal: 12,
+        borderRadius: theme.borderRadius.m,
         borderWidth: 1,
         borderColor: theme.colors.border,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 4,
-        elevation: 2,
+        elevation: 1,
     },
     cardPressed: {
         backgroundColor: theme.colors.backgroundLight,
     },
     cardSelected: {
-        backgroundColor: `${theme.colors.primary}1A`,
-        borderColor: theme.colors.primary,
         borderWidth: 1.5,
     },
-    cardHeader: {
+    cardRow: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 8,
+        gap: 10,
     },
     guardName: {
-        fontSize: 16,
+        flex: 1,
+        fontSize: 15,
         fontWeight: 'bold',
         color: theme.colors.text,
     },
     siteBadge: {
-        backgroundColor: `${theme.colors.primary}1A`,
         paddingHorizontal: 8,
-        paddingVertical: 4,
+        paddingVertical: 3,
         borderRadius: 4,
     },
     siteText: {
-        fontSize: 12,
-        fontWeight: '600',
-        color: theme.colors.primary,
+        fontSize: 11,
+        fontWeight: '700',
     },
-    timeRow: {
+    shiftBadge: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 6,
+        gap: 4,
     },
-    timeText: {
-        fontSize: 14,
+    shiftText: {
+        fontSize: 12,
         color: theme.colors.textSecondary,
+        fontWeight: '500',
     },
     hintText: {
         fontSize: 10,

@@ -11,20 +11,11 @@ export const getAdvancesForGuard = async (guardId, monthStr) => {
     try {
         const advancesRef = getScopedCollection('advances');
 
-        // Calculate start and end dates for the month
-        // Assuming 'date' in advances is stored as YYYY-MM-DD string
-        const startDate = `${monthStr}-01`;
-
-        // Calculate last day of month
-        const [year, month] = monthStr.split('-').map(Number);
-        const lastDay = new Date(year, month, 0).getDate();
-        const endDate = `${monthStr}-${lastDay}`;
-
+        // Query by forMonth field (new records) OR fall back to date range (legacy records)
         const q = query(
             advancesRef,
             where('guardId', '==', guardId),
-            where('date', '>=', startDate),
-            where('date', '<=', endDate)
+            where('forMonth', '==', monthStr)
         );
 
         const snapshot = await getDocs(q);
@@ -35,10 +26,31 @@ export const getAdvancesForGuard = async (guardId, monthStr) => {
             totalAdvances += (Number(data.amount) || 0);
         });
 
+        // Also check legacy records that don't have forMonth (date-based fallback)
+        const startDate = `${monthStr}-01`;
+        const [year, month] = monthStr.split('-').map(Number);
+        const lastDay = new Date(year, month, 0).getDate();
+        const endDate = `${monthStr}-${lastDay}`;
+
+        const legacyQ = query(
+            advancesRef,
+            where('guardId', '==', guardId),
+            where('date', '>=', startDate),
+            where('date', '<=', endDate)
+        );
+
+        const legacySnapshot = await getDocs(legacyQ);
+        const forMonthIds = new Set(snapshot.docs.map(d => d.id));
+        legacySnapshot.forEach(doc => {
+            if (!forMonthIds.has(doc.id) && !doc.data().forMonth) {
+                totalAdvances += (Number(doc.data().amount) || 0);
+            }
+        });
+
         return totalAdvances;
     } catch (error) {
         console.error("Error fetching advances:", error);
-        return 0; // Return 0 on error as per requirements
+        return 0;
     }
 };
 
@@ -68,35 +80,48 @@ export const getAllAdvances = async (guardId = null, monthStr = null) => {
     }
 
     if (monthStr) {
-        const startDate = `${monthStr}-01`;
-        const [year, month] = monthStr.split('-').map(Number);
-        const lastDay = new Date(year, month, 0).getDate();
-        const endDate = `${monthStr}-${lastDay}`;
-
-        baseQueryArgs.push(where('date', '>=', startDate));
-        baseQueryArgs.push(where('date', '<=', endDate));
+        baseQueryArgs.push(where('forMonth', '==', monthStr));
     }
 
     // Add ordering if we aren't filtering by guard (single index)
-    if (!guardId) {
+    if (!guardId && !monthStr) {
         baseQueryArgs.push(orderBy('date', 'desc'));
     }
 
     const q = query(...baseQueryArgs);
 
     const snapshot = await getDocs(q);
-    const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    let data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-    // If filtered by guard, we need to sort manually since we removed orderBy
-    if (guardId) {
-        data.sort((a, b) => {
-            const dateA = a.date || '';
-            const dateB = b.date || '';
-            if (dateA > dateB) return -1;
-            if (dateA < dateB) return 1;
-            return 0;
+    // Also fetch legacy records without forMonth if filtering by month
+    if (monthStr) {
+        const startDate = `${monthStr}-01`;
+        const [year, month] = monthStr.split('-').map(Number);
+        const lastDay = new Date(year, month, 0).getDate();
+        const endDate = `${monthStr}-${lastDay}`;
+
+        let legacyArgs = [advancesRef];
+        if (guardId) legacyArgs.push(where('guardId', '==', guardId));
+        legacyArgs.push(where('date', '>=', startDate));
+        legacyArgs.push(where('date', '<=', endDate));
+
+        const legacySnapshot = await getDocs(query(...legacyArgs));
+        const existingIds = new Set(data.map(d => d.id));
+        legacySnapshot.docs.forEach(doc => {
+            if (!existingIds.has(doc.id) && !doc.data().forMonth) {
+                data.push({ id: doc.id, ...doc.data() });
+            }
         });
     }
+
+    // Sort by date descending
+    data.sort((a, b) => {
+        const dateA = a.date || '';
+        const dateB = b.date || '';
+        if (dateA > dateB) return -1;
+        if (dateA < dateB) return 1;
+        return 0;
+    });
 
     return data;
 };

@@ -239,7 +239,7 @@ const s = StyleSheet.create({
         fontFamily: 'Arial',
         fontSize: 30,
         fontWeight: '700',          // semibold-to-bold: confident, not harsh
-        color: '#1e293b',           // deep slate — warmer than pure black
+        color: '#283739',           // deep slate — warmer than pure black
         textAlign: 'center',
         letterSpacing: -0.6,        // slightly negative — tightens headline visually
         lineHeight: 42,             // loose/comfortable, not cramped

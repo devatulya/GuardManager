@@ -1,8 +1,8 @@
-import Text from '../components/Text';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useMemo } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import ScreenWrapper from '../components/ScreenWrapper';
+import Text from '../components/Text';
 import { theme } from '../theme';
 
 import { shareExcel, sharePDF } from '../services/reporting';
@@ -73,7 +73,10 @@ export default function ReportResultsScreen({ route, navigation }) {
         const sortedDates = Object.keys(groupedByDate).sort();
         const groupedData = sortedDates.map(date => ({
             date,
-            records: groupedByDate[date].sort((a, b) => a.guardName.localeCompare(b.guardName))
+            records: groupedByDate[date].sort((a, b) => {
+                const shiftCmp = (a.shiftType === 'Night' ? 1 : 0) - (b.shiftType === 'Night' ? 1 : 0);
+                return shiftCmp || a.guardName.localeCompare(b.guardName);
+            })
         }));
 
         return {
@@ -98,7 +101,10 @@ export default function ReportResultsScreen({ route, navigation }) {
         const sortedSites = Object.keys(groupedBySite).sort();
         const groupedData = sortedSites.map(siteName => ({
             siteName,
-            records: groupedBySite[siteName].sort((a, b) => a.guardName.localeCompare(b.guardName))
+            records: groupedBySite[siteName].sort((a, b) => {
+                const shiftCmp = (a.shiftType === 'Night' ? 1 : 0) - (b.shiftType === 'Night' ? 1 : 0);
+                return shiftCmp || a.guardName.localeCompare(b.guardName);
+            })
         }));
 
         return {
@@ -163,6 +169,90 @@ export default function ReportResultsScreen({ route, navigation }) {
                         <View style={styles.colTimeRange}><Text style={styles.cellText}>{parseLegacyShift(item)}</Text></View>
                     </View>
                 ))}
+
+                <View style={{ marginTop: 24 }} />
+                <Text style={styles.sectionHeader}>Advances History</Text>
+                {(!data.advancesList || data.advancesList.length === 0) ? (
+                    <Text style={{ textAlign: 'center', color: theme.colors.textSecondary, padding: 12 }}>No advances this month</Text>
+                ) : (
+                    <>
+                        <View style={styles.tableHeader}>
+                            <Text style={[styles.headerCell, styles.colDate]}>Date Given</Text>
+                            <Text style={[styles.headerCell, styles.colMedium]}>Amount</Text>
+                        </View>
+                        {data.advancesList.map((adv, index) => (
+                            <View key={`adv-${index}`} style={styles.rowItem}>
+                                <View style={styles.colDate}><Text style={styles.cellText}>{formatDate(adv.date)}</Text></View>
+                                <View style={styles.colMedium}><Text style={[styles.cellText, { color: theme.colors.danger, fontWeight: 'bold' }]}>-₹{adv.amount}</Text></View>
+                            </View>
+                        ))}
+                    </>
+                )}
+            </ScrollView>
+        );
+    };
+
+    const renderAllGuardsPayoutReport = () => {
+        if (!data || data.length === 0) return <Text style={styles.noDataText}>No payout data found.</Text>;
+        const totalPayout = data.reduce((acc, curr) => acc + (Number(curr.payout) || 0), 0);
+        return (
+            <ScrollView style={styles.guardContainer}>
+                <View style={styles.summaryCard}>
+                    <Text style={styles.summaryTitle}>Payout Report — {month}</Text>
+                    <View style={[styles.summaryRow, { marginTop: 8 }]}>
+                        <Text style={styles.summaryLabel}>Total Guards:</Text>
+                        <Text style={styles.summaryValue}>{data.length}</Text>
+                    </View>
+                </View>
+
+                <View style={[styles.tableHeader, { backgroundColor: theme.colors.slate200, paddingHorizontal: 12 }]}>
+                    <Text style={[styles.headerCell, { flex: 3 }]}>Guard Name</Text>
+                    <Text style={[styles.headerCell, { flex: 1.5, textAlign: 'center' }]}>Duties</Text>
+                    <Text style={[styles.headerCell, { flex: 2, textAlign: 'right' }]}>Advanced</Text>
+                    <Text style={[styles.headerCell, { flex: 2, textAlign: 'right' }]}>Payout</Text>
+                </View>
+
+                {data.map((item, index) => (
+                    <View key={index} style={[styles.rowItem, { paddingVertical: 10, paddingHorizontal: 12 }]}>
+                        <View style={{ flex: 3 }}>
+                            <Text style={styles.cellText} numberOfLines={1}>{item.guardName}</Text>
+                        </View>
+                        <View style={{ flex: 1.5, alignItems: 'center' }}>
+                            <Text style={styles.cellText}>{item.duties}</Text>
+                        </View>
+                        <View style={{ flex: 2, alignItems: 'flex-end' }}>
+                            <Text style={[styles.cellText, { color: '#ef4444' }]}>₹{item.advanced}</Text>
+                        </View>
+                        <View style={{ flex: 2, alignItems: 'flex-end' }}>
+                            <Text style={[styles.cellText, { fontWeight: 'bold' }]}>₹{item.payout}</Text>
+                        </View>
+                    </View>
+                ))}
+
+                {/* Totals Row — aligned to table columns */}
+                <View style={[styles.rowItem, {
+                    borderWidth: 2,
+                    borderBottomWidth: 2,
+                    borderColor: theme.colors.slate300,
+                    marginTop: 4,
+                    paddingVertical: 12,
+                    paddingHorizontal: 12,
+                    backgroundColor: '#f0fdf4',
+                    borderRadius: 8,
+                }]}>
+                    <View style={{ flex: 3 }}>
+                        <Text style={{ fontWeight: 'bold', fontSize: 14, color: theme.colors.slate800 }}>TOTAL</Text>
+                    </View>
+                    <View style={{ flex: 1.5 }} />
+                    <View style={{ flex: 2, alignItems: 'flex-end' }}>
+                        <Text style={{ fontWeight: 'bold', fontSize: 14, color: '#ef4444' }}>
+                            ₹{data.reduce((acc, curr) => acc + (Number(curr.advanced) || 0), 0)}
+                        </Text>
+                    </View>
+                    <View style={{ flex: 2, alignItems: 'flex-end' }}>
+                        <Text style={{ fontWeight: 'bold', fontSize: 14, color: '#10b981' }}>₹{totalPayout}</Text>
+                    </View>
+                </View>
             </ScrollView>
         );
     };
@@ -268,6 +358,8 @@ export default function ReportResultsScreen({ route, navigation }) {
                             </ScrollView>
                         )}
                     </>
+                ) : type === 'All-Guards-Payout' ? (
+                    renderAllGuardsPayoutReport()
                 ) : (
                     renderGuardReport()
                 )}

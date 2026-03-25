@@ -12,6 +12,12 @@ import { getGuards } from '../services/guards';
 import { getSites } from '../services/sites';
 import { formatDate } from '../utils/date';
 
+// Alternating site colors for visual differentiation
+const SITE_COLORS = [
+    { bg: '#dc262615', border: '#dc2626', text: '#dc2626', light: '#fef2f2' },  // Red
+    { bg: '#2563eb15', border: '#2563eb', text: '#2563eb', light: '#eff6ff' },  // Blue
+];
+
 // Force IST Date string for calculations
 const getLocalISODate = (date) => {
     return new Intl.DateTimeFormat('en-CA', {
@@ -134,7 +140,8 @@ export default function AttendanceScreen({ navigation }) {
                 const siteB = b.siteName ? b.siteName.toLowerCase() : '';
                 if (siteA < siteB) return -1;
                 if (siteA > siteB) return 1;
-                return 0;
+                const shiftCmp = (a.shiftType === 'Night' ? 1 : 0) - (b.shiftType === 'Night' ? 1 : 0);
+                return shiftCmp || (a.guardName || '').localeCompare(b.guardName || '');
             });
             setPreviousAttendance(sortedRecords);
             // By default, select all
@@ -316,7 +323,7 @@ export default function AttendanceScreen({ navigation }) {
                         style={({ pressed }) => [styles.copyButton, pressed && styles.pressed]}
                         onPress={handleOpenCopyModal}
                     >
-                        <MaterialIcons name="content-copy" size={24} color={theme.colors.primary} style={{ marginRight: 8 }} />
+                        <MaterialIcons name="content-copy" size={24} color={theme.colors.tertiary} style={{ marginRight: 8 }} />
                         <Text style={styles.copyButtonText}>Copy Last Day's Attendance</Text>
                     </Pressable>
                 </View>
@@ -355,16 +362,16 @@ export default function AttendanceScreen({ navigation }) {
                                 style={[styles.segmentButton, shiftType === 'Day' && styles.segmentButtonActive]}
                                 onPress={() => setShiftType('Day')}
                             >
-                                <MaterialIcons name="wb-sunny" size={20} color={shiftType === 'Day' ? theme.colors.primary : theme.colors.textSecondary} style={{ marginRight: 8 }} />
+                                <MaterialIcons name="wb-sunny" size={20} color={shiftType === 'Day' ? '#f59e0b' : theme.colors.textSecondary} style={{ marginRight: 8 }} />
                                 <Text style={[styles.segmentText, shiftType === 'Day' && styles.segmentTextActive]}>Day Shift</Text>
                             </Pressable>
 
                             <Pressable
-                                style={[styles.segmentButton, shiftType === 'Night' && styles.segmentButtonActive]}
+                                style={[styles.segmentButton, shiftType === 'Night' && styles.segmentButtonNightActive]}
                                 onPress={() => setShiftType('Night')}
                             >
                                 <MaterialIcons name="nights-stay" size={20} color={shiftType === 'Night' ? '#3b82f6' : theme.colors.textSecondary} style={{ marginRight: 8 }} />
-                                <Text style={[styles.segmentText, shiftType === 'Night' && { color: '#3b82f6' }]}>Night Shift</Text>
+                                <Text style={[styles.segmentText, shiftType === 'Night' && styles.segmentTextNightActive]}>Night Shift</Text>
                             </Pressable>
                         </View>
 
@@ -446,29 +453,64 @@ export default function AttendanceScreen({ navigation }) {
                                 </View>
 
                                 <ScrollView style={styles.modalList} showsVerticalScrollIndicator={false}>
-                                    {previousAttendance.map(record => {
-                                        const isSelected = selectedToCopy.has(record.id);
-                                        return (
-                                            <Pressable
-                                                key={record.id}
-                                                style={[styles.modalListItem, isSelected && styles.modalListItemSelected]}
-                                                onPress={() => toggleCopySelection(record.id)}
-                                            >
-                                                <MaterialIcons
-                                                    name={isSelected ? "check-box" : "check-box-outline-blank"}
-                                                    size={24}
-                                                    color={isSelected ? theme.colors.primary : theme.colors.textSecondary}
-                                                />
-                                                <View style={styles.modalListItemTextContainer}>
-                                                    <Text style={styles.modalListItemName}>{record.guardName}</Text>
-                                                    <Text style={styles.modalListItemSite}>@ {record.siteName || 'Unknown Site'}</Text>
+                                    {(() => {
+                                        // Build site color map from sorted records
+                                        const siteColorMap = {};
+                                        let siteIndex = 0;
+                                        previousAttendance.forEach(r => {
+                                            const siteName = (r.siteName || 'Unknown Site').toLowerCase();
+                                            if (!(siteName in siteColorMap)) {
+                                                siteColorMap[siteName] = SITE_COLORS[siteIndex % 2];
+                                                siteIndex++;
+                                            }
+                                        });
+
+                                        let lastSiteName = null;
+                                        return previousAttendance.map(record => {
+                                            const isSelected = selectedToCopy.has(record.id);
+                                            const siteName = (record.siteName || 'Unknown Site').toLowerCase();
+                                            const siteColor = siteColorMap[siteName];
+                                            const showSiteHeader = lastSiteName !== siteName;
+                                            lastSiteName = siteName;
+
+                                            return (
+                                                <View key={record.id}>
+                                                    {showSiteHeader && (
+                                                        <View style={[
+                                                            styles.siteGroupHeader,
+                                                            { backgroundColor: siteColor.bg, borderLeftColor: siteColor.border }
+                                                        ]}>
+                                                            <MaterialIcons name="location-on" size={16} color={siteColor.text} />
+                                                            <Text style={[styles.siteGroupHeaderText, { color: siteColor.text }]}>
+                                                                {record.siteName || 'Unknown Site'}
+                                                            </Text>
+                                                        </View>
+                                                    )}
+                                                    <Pressable
+                                                        style={[
+                                                            styles.modalListItem,
+                                                            { borderLeftWidth: 3, borderLeftColor: siteColor.border },
+                                                            isSelected && { borderColor: siteColor.border, borderWidth: 2, borderLeftWidth: 3 }
+                                                        ]}
+                                                        onPress={() => toggleCopySelection(record.id)}
+                                                    >
+                                                        <MaterialIcons
+                                                            name={isSelected ? "check-box" : "check-box-outline-blank"}
+                                                            size={24}
+                                                            color={isSelected ? siteColor.text : theme.colors.textSecondary}
+                                                        />
+                                                        <View style={styles.modalListItemTextContainer}>
+                                                            <Text style={styles.modalListItemName}>{record.guardName}</Text>
+                                                            <Text style={[styles.modalListItemSite, { color: siteColor.text }]}>@ {record.siteName || 'Unknown Site'}</Text>
+                                                        </View>
+                                                        <Text style={styles.modalListItemTime}>
+                                                            {record.shiftType === 'Night' ? 'Night Shift' : 'Day Shift'}
+                                                        </Text>
+                                                    </Pressable>
                                                 </View>
-                                                <Text style={styles.modalListItemTime}>
-                                                    {record.shiftType === 'Night' ? 'Night Shift' : 'Day Shift'}
-                                                </Text>
-                                            </Pressable>
-                                        );
-                                    })}
+                                            );
+                                        });
+                                    })()}
                                 </ScrollView>
 
                                 <View style={styles.modalFooter}>
@@ -671,13 +713,13 @@ const getStyles = (theme) => StyleSheet.create({
         flex: 1,
     },
     saveButton: {
-        backgroundColor: theme.colors.success,
+        backgroundColor: theme.colors.tertiary,
         height: 52,
         borderRadius: theme.borderRadius.xl,
         flexDirection: 'row',
         justifyContent: 'center',
         alignItems: 'center',
-        shadowColor: theme.colors.success,
+        shadowColor: theme.colors.tertiary,
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.3,
         shadowRadius: 8,
@@ -714,12 +756,12 @@ const getStyles = (theme) => StyleSheet.create({
         height: 48,
         borderRadius: theme.borderRadius.l,
         borderWidth: 1,
-        borderColor: theme.colors.primary,
-        backgroundColor: `${theme.colors.primary}1A`,
+        borderColor: theme.colors.tertiary,
+        backgroundColor: `${theme.colors.tertiary}18`,
         marginTop: 8,
     },
     copyButtonText: {
-        color: theme.colors.primary,
+        color: theme.colors.tertiary,
         fontWeight: 'bold',
         fontSize: 16,
     },
@@ -783,20 +825,33 @@ const getStyles = (theme) => StyleSheet.create({
     modalList: {
         flex: 1,
     },
+    siteGroupHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 8,
+        paddingHorizontal: 12,
+        marginTop: 12,
+        marginBottom: 6,
+        borderLeftWidth: 3,
+        borderRadius: 6,
+    },
+    siteGroupHeaderText: {
+        fontSize: 13,
+        fontWeight: 'bold',
+        marginLeft: 6,
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
+    },
     modalListItem: {
         flexDirection: 'row',
         alignItems: 'center',
         padding: theme.spacing.m,
         borderRadius: theme.borderRadius.l,
         backgroundColor: theme.colors.cardBackground,
-        marginBottom: 8,
+        marginBottom: 6,
         borderWidth: 1,
         borderColor: theme.colors.border,
         ...theme.shadows.clayRaised,
-    },
-    modalListItemSelected: {
-        borderColor: theme.colors.primary,
-        borderWidth: 2,
     },
     modalListItemTextContainer: {
         flex: 1,
@@ -840,12 +895,8 @@ const getStyles = (theme) => StyleSheet.create({
     },
     segmentedControl: {
         flexDirection: 'row',
-        backgroundColor: theme.colors.backgroundLight,
-        borderRadius: theme.borderRadius.l,
-        padding: 4,
+        gap: 6,
         height: 48,
-        borderWidth: 1,
-        borderColor: theme.colors.border,
     },
     segmentButton: {
         flex: 1,
@@ -853,14 +904,29 @@ const getStyles = (theme) => StyleSheet.create({
         borderRadius: theme.borderRadius.m,
         alignItems: 'center',
         justifyContent: 'center',
+        backgroundColor: theme.colors.cardBackground,
+        borderWidth: 1,
+        borderColor: theme.colors.border,
     },
     segmentButtonActive: {
         backgroundColor: theme.colors.cardBackground,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 2,
+        borderWidth: 2,
+        borderColor: theme.colors.primary,
+        shadowColor: theme.colors.primary,
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.25,
+        shadowRadius: 6,
+        elevation: 4,
+    },
+    segmentButtonNightActive: {
+        backgroundColor: theme.colors.cardBackground,
+        borderWidth: 2,
+        borderColor: '#3b82f6',
+        shadowColor: '#3b82f6',
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.25,
+        shadowRadius: 6,
+        elevation: 4,
     },
     segmentText: {
         fontSize: 14,
@@ -869,5 +935,8 @@ const getStyles = (theme) => StyleSheet.create({
     },
     segmentTextActive: {
         color: theme.colors.primary,
+    },
+    segmentTextNightActive: {
+        color: '#3b82f6',
     },
 });

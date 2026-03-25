@@ -11,6 +11,7 @@ const baseColors = {
   primary: '#50D890',
   secondary: '#4F98CA',
   dark: '#272727',
+  tertiary: '#283739',
 };
 
 // ----------------
@@ -22,6 +23,9 @@ const appColors = {
   primarySoft: 'rgba(80, 216, 144, 0.12)',
   primaryVerify: baseColors.primary,
   accent: baseColors.secondary,
+  tertiary: baseColors.tertiary,
+  tertiaryButton: baseColors.tertiary,
+  tertiaryText: baseColors.tertiary,
 
   // Surfaces
   background: baseColors.bg,
@@ -58,9 +62,9 @@ const appColors = {
   slate400: baseColors.secondary,
   slate500: baseColors.dark,
   slate600: baseColors.dark,
-  slate700: baseColors.dark,
-  slate800: baseColors.dark,
-  slate900: baseColors.dark,
+  slate700: baseColors.tertiary,
+  slate800: baseColors.tertiary,
+  slate900: baseColors.tertiary,
 };
 
 // ----------------

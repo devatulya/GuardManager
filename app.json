@@ -8,6 +8,11 @@
     "scheme": "guardmanager",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/logo.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#EFFFFB"
+    },
     "ios": {
       "supportsTablet": true
     },
